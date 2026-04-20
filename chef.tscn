@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://t3erssb1muvm"]
+
+[ext_resource type="Texture2D" uid="uid://da2n76o3bulme" path="res://art/sprites/chef.png" id="1_453op"]
+[ext_resource type="Script" uid="uid://ttq8n3wqnudb" path="res://chef.gd" id="1_mivr5"]
+
+[node name="Manager" type="CharacterBody2D"]
+script = ExtResource("1_mivr5")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(20, 20)
+texture = ExtResource("1_453op")
