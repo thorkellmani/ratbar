@@ -1,13 +1,13 @@
 [gd_scene load_steps=3 format=3 uid="uid://bs14oh3b3pb0j"]
 
-[ext_resource type="Script" uid="uid://cn82iy1t3hxgj" path="res://rat.gd" id="1_pmwci"]
+[ext_resource type="Script" uid="uid://cn82iy1t3hxgj" path="res://entities/rat/rat.gd" id="1_3elot"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_io2wn"]
 radius = 26.0
 height = 118.0
 
 [node name="Rat" type="Area2D"]
-script = ExtResource("1_pmwci")
+script = ExtResource("1_3elot")
 
 [node name="ColorRect" type="ColorRect" parent="."]
 offset_left = -21.0

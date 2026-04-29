@@ -1,11 +1,14 @@
-[gd_scene load_steps=5 format=3 uid="uid://dxpm20igoillm"]
+[gd_scene load_steps=7 format=3 uid="uid://dxpm20igoillm"]
 
 [ext_resource type="PackedScene" uid="uid://bgh42503avk7q" path="res://kitchen.tscn" id="1_0xm2m"]
-[ext_resource type="PackedScene" uid="uid://t3erssb1muvm" path="res://chef.tscn" id="2_h2yge"]
-[ext_resource type="PackedScene" uid="uid://bs14oh3b3pb0j" path="res://rat.tscn" id="3_h2yge"]
-[ext_resource type="Script" uid="uid://bedegktgbds81" path="res://job_manager.gd" id="4_1bvp3"]
+[ext_resource type="Script" uid="uid://dn2bwf5drxhim" path="res://main.gd" id="1_lquwl"]
+[ext_resource type="PackedScene" uid="uid://t3erssb1muvm" path="res://entities/chef/chef.tscn" id="2_h2yge"]
+[ext_resource type="PackedScene" uid="uid://bs14oh3b3pb0j" path="res://entities/rat/rat.tscn" id="3_h2yge"]
+[ext_resource type="Script" uid="uid://bedegktgbds81" path="res://managers/job_manager.gd" id="4_1bvp3"]
+[ext_resource type="Script" uid="uid://cogu2jhsalh42" path="res://managers/rat_manager.gd" id="6_7mycd"]
 
 [node name="Main" type="Node"]
+script = ExtResource("1_lquwl")
 
 [node name="Chef" parent="." instance=ExtResource("2_h2yge")]
 visible = false
@@ -13,9 +16,6 @@ position = Vector2(449, 225)
 
 [node name="Kitchen" parent="." instance=ExtResource("1_0xm2m")]
 layer = -1
-
-[node name="Rat1" parent="." instance=ExtResource("3_h2yge")]
-position = Vector2(508, 474)
 
 [node name="JobManager" type="Node" parent="."]
 script = ExtResource("4_1bvp3")
@@ -35,4 +35,10 @@ position = Vector2(803, 273)
 [node name="ServerMarker" type="Marker2D" parent="JobManager"]
 position = Vector2(382, 442)
 
-[connection signal="navigate_to_job" from="JobManager" to="Rat1" method="_on_job_manager_navigate_to_job"]
+[node name="RatManager" type="Node" parent="."]
+script = ExtResource("6_7mycd")
+
+[node name="Rat1" parent="RatManager" instance=ExtResource("3_h2yge")]
+position = Vector2(508, 474)
+
+[connection signal="navigate_to_job" from="JobManager" to="RatManager" method="_on_job_manager_navigate_to_job"]

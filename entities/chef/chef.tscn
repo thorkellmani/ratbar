@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://t3erssb1muvm"]
 
 [ext_resource type="Texture2D" uid="uid://da2n76o3bulme" path="res://art/sprites/chef.png" id="1_453op"]
-[ext_resource type="Script" uid="uid://ttq8n3wqnudb" path="res://chef.gd" id="1_mivr5"]
+[ext_resource type="Script" uid="uid://ttq8n3wqnudb" path="res://entities/chef/chef.gd" id="1_mivr5"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_mivr5"]
 radius = 31.0
