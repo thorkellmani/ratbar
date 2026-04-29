@@ -1,12 +1,38 @@
-[gd_scene load_steps=3 format=3 uid="uid://dxpm20igoillm"]
+[gd_scene load_steps=5 format=3 uid="uid://dxpm20igoillm"]
 
 [ext_resource type="PackedScene" uid="uid://bgh42503avk7q" path="res://kitchen.tscn" id="1_0xm2m"]
 [ext_resource type="PackedScene" uid="uid://t3erssb1muvm" path="res://chef.tscn" id="2_h2yge"]
+[ext_resource type="PackedScene" uid="uid://bs14oh3b3pb0j" path="res://rat.tscn" id="3_h2yge"]
+[ext_resource type="Script" uid="uid://bedegktgbds81" path="res://job_manager.gd" id="4_1bvp3"]
 
 [node name="Main" type="Node"]
 
 [node name="Chef" parent="." instance=ExtResource("2_h2yge")]
+visible = false
 position = Vector2(449, 225)
 
 [node name="Kitchen" parent="." instance=ExtResource("1_0xm2m")]
 layer = -1
+
+[node name="Rat1" parent="." instance=ExtResource("3_h2yge")]
+position = Vector2(508, 474)
+
+[node name="JobManager" type="Node" parent="."]
+script = ExtResource("4_1bvp3")
+
+[node name="Cook1Marker" type="Marker2D" parent="JobManager"]
+position = Vector2(568, 269)
+
+[node name="Cook2Marker" type="Marker2D" parent="JobManager"]
+position = Vector2(920, 441)
+
+[node name="Grocer1Marker" type="Marker2D" parent="JobManager"]
+position = Vector2(324, 273)
+
+[node name="DishwasherMarker" type="Marker2D" parent="JobManager"]
+position = Vector2(803, 273)
+
+[node name="ServerMarker" type="Marker2D" parent="JobManager"]
+position = Vector2(382, 442)
+
+[connection signal="navigate_to_job" from="JobManager" to="Rat1" method="_on_job_manager_navigate_to_job"]
