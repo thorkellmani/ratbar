@@ -1,9 +1,8 @@
-[gd_scene load_steps=7 format=3 uid="uid://dxpm20igoillm"]
+[gd_scene load_steps=6 format=3 uid="uid://dxpm20igoillm"]
 
 [ext_resource type="PackedScene" uid="uid://bgh42503avk7q" path="res://kitchen.tscn" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://dn2bwf5drxhim" path="res://main.gd" id="1_lquwl"]
 [ext_resource type="PackedScene" uid="uid://t3erssb1muvm" path="res://entities/chef/chef.tscn" id="2_h2yge"]
-[ext_resource type="PackedScene" uid="uid://bs14oh3b3pb0j" path="res://entities/rat/rat.tscn" id="3_h2yge"]
 [ext_resource type="Script" uid="uid://bedegktgbds81" path="res://managers/job_manager.gd" id="4_1bvp3"]
 [ext_resource type="Script" uid="uid://cogu2jhsalh42" path="res://managers/rat_manager.gd" id="6_7mycd"]
 
@@ -11,7 +10,6 @@
 script = ExtResource("1_lquwl")
 
 [node name="Chef" parent="." instance=ExtResource("2_h2yge")]
-visible = false
 position = Vector2(449, 225)
 
 [node name="Kitchen" parent="." instance=ExtResource("1_0xm2m")]
@@ -38,7 +36,11 @@ position = Vector2(382, 442)
 [node name="RatManager" type="Node" parent="."]
 script = ExtResource("6_7mycd")
 
-[node name="Rat1" parent="RatManager" instance=ExtResource("3_h2yge")]
-position = Vector2(508, 474)
+[node name="AssignJobButton" type="Button" parent="."]
+offset_left = 15.0
+offset_top = 293.0
+offset_right = 153.0
+offset_bottom = 442.0
 
 [connection signal="navigate_to_job" from="JobManager" to="RatManager" method="_on_job_manager_navigate_to_job"]
+[connection signal="pressed" from="AssignJobButton" to="JobManager" method="_on_assign_job_button_pressed"]

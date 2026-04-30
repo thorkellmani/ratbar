@@ -1,8 +1,9 @@
 extends Node
 
-var rat_scene = preload("res://rat.tscn")
+var rat_scene = preload("res://entities/rat/rat.tscn")
 
 var next_rat_id: int = 1
+
 
 var RATS: Dictionary[int, Rat]
 
@@ -10,6 +11,7 @@ func generate_rat() -> void:
 	var rat = rat_scene.instantiate()
 	rat.id = next_rat_id
 	RATS[rat.id] = rat
+	add_child(rat)
 	
 func navigate_to_job() -> void:
 	# if not at_job, go to job.
@@ -19,7 +21,7 @@ func navigate_to_job() -> void:
 	pass
 
 func _on_job_manager_navigate_to_job(id: int, coords: Vector2) -> void:
+	print("navigation to job")
 	# create navigation manager in MAIN 
 	# just teleport for now+
-	print(RATS)
 	RATS[id].global_position = coords
