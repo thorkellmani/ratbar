@@ -36,11 +36,24 @@ position = Vector2(382, 442)
 [node name="RatManager" type="Node" parent="."]
 script = ExtResource("6_7mycd")
 
+[node name="RatGenerateMarker" type="Marker2D" parent="RatManager"]
+position = Vector2(510, 522)
+
 [node name="AssignJobButton" type="Button" parent="."]
 offset_left = 15.0
 offset_top = 293.0
-offset_right = 153.0
-offset_bottom = 442.0
+offset_right = 138.0
+offset_bottom = 363.0
+disabled = true
+text = "ASSIGN JOB"
+
+[node name="GenerateRatButton" type="Button" parent="."]
+offset_left = 23.0
+offset_top = 376.0
+offset_right = 133.0
+offset_bottom = 449.0
+text = "Generate Rat"
 
 [connection signal="navigate_to_job" from="JobManager" to="RatManager" method="_on_job_manager_navigate_to_job"]
 [connection signal="pressed" from="AssignJobButton" to="JobManager" method="_on_assign_job_button_pressed"]
+[connection signal="pressed" from="GenerateRatButton" to="RatManager" method="generate_rat"]

@@ -22,14 +22,11 @@ func unassign_job(ratId: int) -> void:
 	_assigned_jobs[ratId] = Constants.JOB.UNASSIGNED
 
 func assign_job(ratId: int, job: Constants.JOB) -> void:
-	print("assign job")
 	_assigned_jobs[ratId] = job
 	var job_location = JOB_LOCATIONS.get(job, Vector2(0,0))
 	
 	if job_location:
 		navigate_to_job.emit(ratId, job_location)
-	else:
-		print("job location not found")
 	
 func clear() -> void:
 	#what happens when all jobs are unassigned?

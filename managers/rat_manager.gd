@@ -8,10 +8,12 @@ var next_rat_id: int = 1
 var RATS: Dictionary[int, Rat]
 
 func generate_rat() -> void:
-	var rat = rat_scene.instantiate()
+	var rat: Rat = rat_scene.instantiate()
 	rat.id = next_rat_id
 	RATS[rat.id] = rat
 	add_child(rat)
+	rat.global_position = $RatGenerateMarker.global_position
+	
 	
 func navigate_to_job() -> void:
 	# if not at_job, go to job.
