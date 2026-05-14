@@ -11,6 +11,9 @@ config_version=5
 [application]
 
 config/name="ratbar"
+config/name_localized={
+"is": "Rottubar"
+}
 run/main_scene="uid://dxpm20igoillm"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 config/icon="res://icon.svg"

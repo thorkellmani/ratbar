@@ -34,5 +34,4 @@ func clear() -> void:
 	_assigned_jobs = {}
 
 func _on_assign_job_button_pressed() -> void:
-	print('PRESSED')
 	assign_job(1, Constants.JOB.values().pick_random())
