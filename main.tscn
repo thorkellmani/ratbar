@@ -3,8 +3,8 @@
 [ext_resource type="PackedScene" uid="uid://bgh42503avk7q" path="res://kitchen.tscn" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://dn2bwf5drxhim" path="res://main.gd" id="1_lquwl"]
 [ext_resource type="PackedScene" uid="uid://t3erssb1muvm" path="res://entities/chef/chef.tscn" id="2_h2yge"]
-[ext_resource type="Script" uid="uid://bedegktgbds81" path="res://managers/job_manager.gd" id="4_1bvp3"]
-[ext_resource type="Script" uid="uid://cogu2jhsalh42" path="res://managers/rat_manager.gd" id="6_7mycd"]
+[ext_resource type="Script" uid="uid://bedegktgbds81" path="res://managers/job_manager/job_manager.gd" id="4_1bvp3"]
+[ext_resource type="Script" uid="uid://cogu2jhsalh42" path="res://managers/rat_manager/rat_manager.gd" id="6_7mycd"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_lquwl")
@@ -13,22 +13,27 @@ script = ExtResource("1_lquwl")
 visible = false
 position = Vector2(449, 225)
 
-[node name="JobManager" type="Node" parent="."]
+[node name="JobManager" type="Node" parent="." node_paths=PackedStringArray("head_cook_marker", "line_cook_marker", "prep_cook_marker", "dishwasher_marker", "bartender_marker")]
 script = ExtResource("4_1bvp3")
+head_cook_marker = NodePath("HeadCookMarker")
+line_cook_marker = NodePath("LineCookMarker")
+prep_cook_marker = NodePath("PrepCookMarker")
+dishwasher_marker = NodePath("DishwasherMarker")
+bartender_marker = NodePath("BartenderMarker")
 
-[node name="Cook1Marker" type="Marker2D" parent="JobManager"]
+[node name="HeadCookMarker" type="Marker2D" parent="JobManager"]
 position = Vector2(568, 269)
 
-[node name="Cook2Marker" type="Marker2D" parent="JobManager"]
+[node name="LineCookMarker" type="Marker2D" parent="JobManager"]
 position = Vector2(920, 441)
 
-[node name="Grocer1Marker" type="Marker2D" parent="JobManager"]
+[node name="PrepCookMarker" type="Marker2D" parent="JobManager"]
 position = Vector2(324, 273)
 
 [node name="DishwasherMarker" type="Marker2D" parent="JobManager"]
 position = Vector2(803, 273)
 
-[node name="ServerMarker" type="Marker2D" parent="JobManager"]
+[node name="BartenderMarker" type="Marker2D" parent="JobManager"]
 position = Vector2(382, 442)
 
 [node name="RatManager" type="Node2D" parent="."]

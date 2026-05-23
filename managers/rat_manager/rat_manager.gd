@@ -11,12 +11,22 @@ var selected_rat: Rat
 
 func generate_rat() -> void:
 	var rat: Rat = rat_scene.instantiate()
-	rat.rat_clicked.connect( func(x: Rat): rat_clicked.emit(x))
 	rat.id = next_rat_id
-	RATS[rat.id] = rat
+	next_rat_id += 1
+	rat.rat_clicked.connect( func(x: Rat): rat_clicked.emit(x))
+	
+	for rat_trait in RatConstants.TRAIT.values():
+		rat.personality[rat_trait] = randfn(RatConstants.TRAIT_MEAN[rat_trait], RatConstants.TRAIT_DEVIATION[rat_trait])
+
+	rat.mood = RatConstants.DEFAULT_MOOD.duplicate()
+	rat.statuses = RatConstants.DEFAULT_STATUSES.duplicate()
+	rat.job_skills = RatConstants.DEFAULT_JOB_SKILLS.duplicate()
+	rat.currency = 0
+	rat.owner_relationship = 0
+	
 	add_child(rat)
 	rat.global_position = $RatGenerateMarker.global_position
-
+	RATS[rat.id] = rat
 	
 func navigate_to_job() -> void:
 	# if not at_job, go to job.

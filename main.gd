@@ -4,15 +4,15 @@ var picked_rat: Rat
 
 func _ready() -> void:
 	if OS.is_debug_build():
-		for key in Rat.TRAIT:
+		for key in RatConstants.TRAIT:
 			var label = Label.new()
 			label.name = key
 			$DebugControls.add_child(label)
-		for key in Rat.MOOD:
+		for key in RatConstants.MOOD:
 			var label = Label.new()
 			label.name = key
 			$DebugControls.add_child(label)
-		for key in Rat.STATUS:
+		for key in RatConstants.STATUS:
 			var label = Label.new()
 			label.name = key
 			print(key)
@@ -30,6 +30,6 @@ func _on_rat_clicked(rat: Rat) -> void:
 func _process(_delta: float) -> void:
 	if picked_rat and $DebugControls.visible:
 		for key in picked_rat.TRAIT:
-			$DebugControls.get_node(key).text = "%s: %.1f" % [key, picked_rat.personality[Rat.TRAIT[key]]]
+			$DebugControls.get_node(key).text = "%s: %.1f" % [key, picked_rat.personality[RatConstants.TRAIT[key]]]
 		for key in picked_rat.MOOD:
-			$DebugControls.get_node(key).text = "%s: %.1f" % [key, picked_rat.mood[Rat.MOOD[key]]]
+			$DebugControls.get_node(key).text = "%s: %.1f" % [key, picked_rat.mood[RatConstants.MOOD[key]]]

@@ -9,7 +9,7 @@ Godot has no automated test runner — verification is done by running the scene
 
 ### 0.1 Rat inspector overlay
 - [x] Clicking a rat in the scene opens a debug panel showing all internal stats in real time
-- [ ] Panel updates each tick (no manual refresh needed)
+- [x] Panel updates each tick (no manual refresh needed)
 - [ ] Panel displays: all personality stats, all needs, stress, health, inebriation, owner_relationship, radicalization, extra_stress, primary_vice, addiction per vice, current mood_state, current job assignment, job_skills per job
 - [x] Clicking another rat switches the panel to that rat; clicking the same rat closes it
 
@@ -46,7 +46,7 @@ Godot has no automated test runner — verification is done by running the scene
 **Test:** New rat has stress=0, health=100, inebriation=0, owner_relationship=0, radicalization=0, extra_stress=0.
 
 ### 1.4 Job skills dictionary
-- [ ] Add `job_skills: Dictionary[Constants.JOB, float]` (0–10 per job)
+- [x] Add `job_skills: Dictionary[Constants.JOB, float]` (0–10 per job)
 - [ ] Populate on generation with a random roll seeded by personality fit (high ambition → higher cook rolls, high socialness → higher bartender rolls)
 
 **Test:** Generate 20 rats. High-ambition rats (ambition > 50) should average higher cook skill than low-ambition rats (ambition < -50). Print comparison.
