@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://diq0u5toqvc0u"]
+
+[node name="PanelButton" type="Button"]
+layout_mode = 2
+text = ""

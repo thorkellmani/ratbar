@@ -10,7 +10,7 @@ Godot has no automated test runner — verification is done by running the scene
 ### 0.1 Rat inspector overlay
 - [x] Clicking a rat in the scene opens a debug panel showing all internal stats in real time
 - [x] Panel updates each tick (no manual refresh needed)
-- [ ] Panel displays: all personality stats, all needs, stress, health, inebriation, owner_relationship, radicalization, extra_stress, primary_vice, addiction per vice, current mood_state, current job assignment, job_skills per job
+- [ ] Panel displays: all personality stats, all needs, stress, health, inebriation, owner_relationship, radicalization, extra_stress, primary_vice, addiction per vice, current crisis_state, current job assignment, job_skills per job
 - [x] Clicking another rat switches the panel to that rat; clicking the same rat closes it
 
 **Test:** Run the scene. Click a rat. Panel appears with readable stat values that update live. Change a stat via a cheat input or direct GDScript — panel reflects the change immediately. Click a second rat — panel switches. Click empty space or same rat — panel closes.
@@ -18,7 +18,7 @@ Godot has no automated test runner — verification is done by running the scene
 ### 0.2 Rat stat override (cheat input)
 - [ ] Debug panel includes an input field to directly set any stat to a value at runtime (for testing scenarios without waiting for natural game time)
 
-**Test:** Set `stress` to 100 via the override input. Confirm the rat's `mood_state` changes to BURNOUT or REBELLION. Set `nutrition` to -80. Confirm the need decay and action selection reflect the new value immediately.
+**Test:** Set `stress` to 100 via the override input. Confirm the rat's `crisis_state` changes to BURNOUT or REBELLION. Set `nutrition` to -80. Confirm the need decay and action selection reflect the new value immediately.
 
 ### 0.3 Simulation speed control
 - [ ] A debug control allows time-scaling the simulation (0.5×, 1×, 2×, 5×, 10×) so decay and stress tests can be verified in a reasonable amount of real time
@@ -131,7 +131,7 @@ Godot has no automated test runner — verification is done by running the scene
 **Test:** Two stressed rats (stress=70). One uses vice, one does nothing. After the same time window, vice-user has lower stress.
 
 ### 3.6 Breaking point roll
-- [ ] When stress hits 100, trigger a roll for mood state (burnout or rebellion)
+- [ ] When stress hits 100, trigger a roll for crisis state (burnout or rebellion)
 - [ ] High temper + low owner_relationship → skews toward rebellion
 - [ ] Prolonged overwork → skews toward burnout
 
@@ -139,13 +139,13 @@ Godot has no automated test runner — verification is done by running the scene
 
 ---
 
-## 4. Mood States
+## 4. Crisis States
 
 ### 4.1 Burnout entry and visibility
 - [ ] Enter BURNOUT state when breaking point roll resolves to burnout
 - [ ] Burnout should be visually obvious (animation or indicator)
 
-**Test:** Trigger burnout on a rat. Confirm the rat's `mood_state` is BURNOUT. Confirm a visible change in the rat's appearance or animation.
+**Test:** Trigger burnout on a rat. Confirm the rat's `crisis_state` is BURNOUT. Confirm a visible change in the rat's appearance or animation.
 
 ### 4.2 Burnout effects
 - [ ] Stress locked at 100 while in burnout
@@ -164,7 +164,7 @@ Godot has no automated test runner — verification is done by running the scene
 - [ ] Enter REBELLION when breaking point roll resolves to rebellion
 - [ ] Rat's `mood` signal is suppressed (rat appears fine externally)
 
-**Test:** Rat enters REBELLION. Its displayed mood reads neutral or positive despite internal stats. Internally, `mood_state` is REBELLION.
+**Test:** Rat enters REBELLION. Its displayed mood reads neutral or positive despite internal stats. Internally, `crisis_state` is REBELLION.
 
 ### 4.5 Organizer behavior
 - [ ] Rebellious rat continues working (so as not to flag)
@@ -388,6 +388,6 @@ Godot has no automated test runner — verification is done by running the scene
 - Pathfinding (currently teleporting — known placeholder)
 - Rat economy / currency system (design TBD)
 - Full UI for owner-facing stats
-- Art/animations for mood states and environmental tells
+- Art/animations for crisis states and environmental tells
 - Health inspector and reviews
 - Rat Man ending trigger conditions

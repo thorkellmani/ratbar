@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://dxpm20igoillm"]
+[gd_scene load_steps=7 format=3 uid="uid://dxpm20igoillm"]
 
 [ext_resource type="PackedScene" uid="uid://bgh42503avk7q" path="res://kitchen.tscn" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://dn2bwf5drxhim" path="res://main.gd" id="1_lquwl"]
 [ext_resource type="PackedScene" uid="uid://t3erssb1muvm" path="res://entities/chef/chef.tscn" id="2_h2yge"]
 [ext_resource type="Script" uid="uid://bedegktgbds81" path="res://managers/job_manager/job_manager.gd" id="4_1bvp3"]
 [ext_resource type="Script" uid="uid://cogu2jhsalh42" path="res://managers/rat_manager/rat_manager.gd" id="6_7mycd"]
+[ext_resource type="PackedScene" uid="uid://diubbu3d51vsp" path="res://debug/panel/debug_panel.tscn" id="6_272bh"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_lquwl")
@@ -42,24 +43,10 @@ script = ExtResource("6_7mycd")
 [node name="RatGenerateMarker" type="Marker2D" parent="RatManager"]
 position = Vector2(510, 522)
 
-[node name="DebugControls" type="VBoxContainer" parent="."]
-offset_left = 23.0
-offset_top = 29.0
-offset_right = 192.0
-offset_bottom = 611.0
-mouse_filter = 2
-
-[node name="AssignJobButton" type="Button" parent="DebugControls"]
-layout_mode = 2
-text = "ASSIGN JOB"
-
-[node name="GenerateRatButton" type="Button" parent="DebugControls"]
-layout_mode = 2
-text = "Generate Rat"
-
 [node name="Kitchen" parent="." instance=ExtResource("1_0xm2m")]
 layer = -1
 
+[node name="DebugPanel" parent="." instance=ExtResource("6_272bh")]
+visible = false
+
 [connection signal="navigate_to_job" from="JobManager" to="RatManager" method="_on_job_manager_navigate_to_job"]
-[connection signal="pressed" from="DebugControls/AssignJobButton" to="JobManager" method="_on_assign_job_button_pressed"]
-[connection signal="pressed" from="DebugControls/GenerateRatButton" to="RatManager" method="generate_rat"]

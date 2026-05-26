@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3 uid="uid://diubbu3d51vsp"]
+
+[ext_resource type="Script" uid="uid://hktebjtq7alh" path="res://debug/panel/debug_panel.gd" id="1_426e4"]
+
+[node name="DebugPanel" type="VBoxContainer"]
+offset_left = 23.0
+offset_top = 29.0
+offset_right = 192.0
+offset_bottom = 611.0
+mouse_filter = 2
+script = ExtResource("1_426e4")

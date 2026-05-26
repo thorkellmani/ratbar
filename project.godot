@@ -18,6 +18,10 @@ run/main_scene="uid://dxpm20igoillm"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 config/icon="res://icon.svg"
 
+[autoload]
+
+Colony="*res://entities/colony/colony.gd"
+
 [input]
 
 move_right={

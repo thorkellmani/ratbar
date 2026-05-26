@@ -4,28 +4,12 @@ var picked_rat: Rat
 
 func _ready() -> void:
 	if OS.is_debug_build():
-		for key in RatConstants.TRAIT:
-			var label = Label.new()
-			label.name = key
-			$DebugControls.add_child(label)
-		for key in RatConstants.MOOD:
-			var label = Label.new()
-			label.name = key
-			$DebugControls.add_child(label)
-		for key in RatConstants.STATUS:
-			var label = Label.new()
-			label.name = key
-			print(key)
-			$DebugControls.add_child(label)
-		for key in ["currency", "owner_relationship"]:
-			var label = Label.new()
-			label.name = key
-			$DebugControls.add_child(label)
 		$RatManager.rat_clicked.connect(_on_rat_clicked)
-		
+		$DebugPanel.assign_job_requested.connect($JobManager._on_assign_job_button_pressed)
+		$DebugPanel.generate_rat_requested.connect($RatManager.generate_rat)
+
 func _on_rat_clicked(rat: Rat) -> void:
-	picked_rat = rat
-	$DebugControls.show()
+	$DebugPanel.inspect_rat(rat)
 
 func _process(_delta: float) -> void:
 	if picked_rat and $DebugControls.visible:
@@ -33,3 +17,5 @@ func _process(_delta: float) -> void:
 			$DebugControls.get_node(key).text = "%s: %.1f" % [key, picked_rat.personality[RatConstants.TRAIT[key]]]
 		for key in picked_rat.MOOD:
 			$DebugControls.get_node(key).text = "%s: %.1f" % [key, picked_rat.mood[RatConstants.MOOD[key]]]
+		for key in picked_rat.STATUS:
+			$DebugControls.get_node(key).text = "%s: %.1f" % [key, picked_rat.statuses[RatConstants.STATUS[key]]]

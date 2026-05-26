@@ -8,7 +8,32 @@ The model is inspired by The Sims: locations and actions advertise their potenti
 
 ---
 
-## Personality Stats
+## Physical Space
+
+### Kitchen
+
+The kitchen is the primary simulation space. All job stations are located here. Rats navigate between stations as they evaluate and act on locations.
+
+| Station | Job | Notes |
+|---|---|---|
+| Stoves | Head cook, line cook | Center of kitchen activity |
+| Counters | Prep cook | Adjacent to stoves |
+| Wash basin | Dishwasher | Back of kitchen |
+| Bar | Bartender | Front of house |
+
+### Spawn Points
+
+Rats do not have fixed homes. They spawn from environmental hot spots — roof gaps, windows, floor holes, wall cracks. These represent their abstract living space. There is no tracked sleep location; nesting is implied by spawn point affinity.
+
+### Activity Space
+
+Vices that pull rats away from the kitchen are treated as an abstract off-screen state. The rat is simply absent from the kitchen — zero job output, zero pod contribution. The spatial rendering of this space is unresolved and deferred.
+
+---
+
+## Data Model
+
+### Personality Stats
 
 Fixed at generation. Scale -100 to 100. These are weights and modifiers — they seed job skills at generation and modify every calculation downstream.
 
@@ -24,71 +49,67 @@ Defaults represent the baseline cartoon rat. `laziness` is the most variant stat
 
 High `ambition` + high `laziness` is an inherently stressful combination unless the rat is in a position of control. Without that outlet, ambition and inaction create constant internal pressure.
 
----
+### Needs
 
-## Rat Stats Summary
+Continuous stats, -100 to 100. 0 = neutral. Negative = deprived. Positive = satisfied. Decay over time, relieved by actions and locations.
 
-All stats stored per rat. Scales and descriptions for reference.
-
-| Stat | Scale | Description |
-|---|---|---|
-| `greed` | -100 to 100 | Personality — fixed at generation |
-| `temper` | -100 to 100 | Personality — fixed at generation |
-| `socialness` | -100 to 100 | Personality — fixed at generation |
-| `ambition` | -100 to 100 | Personality — fixed at generation |
-| `laziness` | -100 to 100 | Personality — fixed at generation |
-| `nutrition` | -100 to 100 | Need — negative = deprived |
-| `energy` | -100 to 100 | Need — negative = exhausted, positive = energized |
-| `stimulation` | -100 to 100 | Need — negative = understimulated |
-| `social` | -100 to 100 | Need — negative = lonely |
-| `vice_satisfaction` | -100 to 100 | Need — negative = craving, positive = satisfied |
-| `stress` | 0 to 100 | Always negative. Feeds into all calculations. |
-| `health` | 0 to 100 | 100 = fully healthy. Recovers over time. |
-| `inebriation` | 0 to 100 | Accumulates from drinking and drugs. Decays over time. |
-| `owner_relationship` | -100 to 100 | Starts at 0. Compliance multiplier on employment pressure. |
-| `radicalization` | 0 to 100 | Hidden. Raised by organizer broadcasts. Drives rebellion susceptibility. |
-| `extra_stress` | 0 to 100 | Hidden. Accumulates in burnout when forced to work. Maxing out kills the rat. |
-| `currency` | 0 to ∞ | Gains and losses through gambling. Economy TBD. |
-| `job_skills` | 0–10 per job | Permanent. Increments slowly with active work. |
-| `camaraderie` | -100 to 100 per known rat | Asymmetric per pair. Starts near 0 on first meeting. |
-| `addiction` | 0–100 per vice | Escalates with use, decays with abstinence at vice-specific rates. |
-
----
-
-## Needs
-
-Continuous stats, -100 to 100. 0 = neutral/fine. Negative = deprived. Positive = satisfied. Decay over time, relieved by actions and locations. Timing is not fixed — fulfillment happens when the need value demands it, not on a clock. Baseline amounts assume a rat that is doing okay; unmet needs and stress shift the rates.
-
-| Need | Decays when | Relieved by | Baseline |
+| Stat | Decays when | Relieved by | Baseline |
 |---|---|---|---|
-| `nutrition` | Always | Eating | ~2x per shift (dawn/dusk) |
+| `nutrition` | Always | Eating | ~2x per shift |
 | `energy` | While awake, faster while working | Sleep (polyphasic — 2-3 naps per shift) | 2-3 naps, adjusted by need value |
-| `stimulation` | During repetitive work, unstimulated periods | Pranks, gambling, stimulating vices, any engaging activity | 1-2 fun sessions per shift |
+| `stimulation` | During repetitive or unstimulating periods | Pranks, gambling, stimulating vices, any engaging activity | 1-2 fun sessions per shift |
 | `social` | Always while awake | Interaction with other rats | Near-constant; work chatter maintains but does not grow it |
 | `vice_satisfaction` | Driven by stress level, not time | Using their vice | ~3 uses per shift at baseline stress |
 
 `stimulation` and `social` are distinct. A rat can be stimulated but lonely, or socially satisfied but understimulated. Vices and activities relieve stimulation. Only rat interaction relieves social.
 
-`socialness` controls how fast `social` decays and how much positive effect the rat has on others during interaction — a low-socialness rat needs interaction less frequently and contributes less to the other rat's fulfillment, but the need is still present. A high-socialness rat is miserable without constant interaction and boosts others significantly.
+### Status Stats
 
-### Fulfillment History & Repetition
+| Stat | Scale | Notes |
+|---|---|---|
+| `stress` | 0 to 100 | Always negative. Feeds into all calculations. 100 = breaking point. |
+| `health` | 0 to 100 | 100 = fully healthy. Recovers over time. |
+| `inebriation` | 0 to 100 | Accumulates from drinking and drugs. Decays over time. |
+| `owner_relationship` | -100 to 100 | Starts at 0. Primary compliance multiplier on employment pressure. |
+| `radicalization` | 0 to 100 | Hidden. Raised by organizer broadcasts. Drives rebellion susceptibility. |
+| `extra_stress` | 0 to 100 | Hidden. Accumulates in burnout when forced to work. Maxing out kills the rat. |
+| `currency` | 0 to inf | Gains and losses through gambling. Economy TBD. |
+| `crisis_state` | UNAFFECTED / BURNOUT / REBELLION | Set by breaking point roll. |
+| `job_state` | IDLE / PROCEEDING_TO_WORK / WORKING / PROCEEDING_TO_VICE / VICING | Current activity state. |
 
-Each need tracks its last fulfillment source. Repeating the same source yields diminished returns. One different fulfillment in between fully resets the penalty.
+### Per-Rat Collections
+
+| Collection | Key | Scale | Notes |
+|---|---|---|---|
+| `job_skills` | JOB | 0-10 | Permanent. Increments slowly with active work. Never decays. |
+| `addiction` | VICE | 0-100 | Escalates with use, decays with abstinence at vice-specific rates. |
+| `camaraderie` | rat_id | -100 to 100 | Asymmetric per pair. Starts near 0 on first meeting. |
+
+---
+
+## Internal Dynamics
+
+### Need Decay & Fulfillment
+
+Timing is not fixed — fulfillment happens when the need value demands it, not on a clock. Baseline amounts assume a rat that is doing okay; unmet needs and stress shift the rates.
+
+`socialness` controls how fast `social` decays and how much positive effect the rat has on others during interaction. A low-socialness rat needs interaction less and contributes less to others' fulfillment. A high-socialness rat is miserable without constant interaction and boosts others significantly.
+
+#### Fulfillment History & Repetition
+
+Each need tracks its last fulfillment source. Repeating the same source yields diminishing returns. One different fulfillment in between fully resets the penalty.
 
 | Need | Tracks |
 |---|---|
-| `nutrition` | Last food eaten |
-| `energy` | Last sleep location |
+| `nutrition` | Last food source |
 | `stimulation` | Last activity |
-| `social` | Last activity and with whom |
+| `social` | Last activity and last social partner |
 
-**Sleep location is an exception** — rats are nesting creatures. Returning to the same sleep spot is a bonus, not a penalty. Disrupting a rat's established sleep location causes stress. Moving to a clearly better spot is neutral.
+**Friendship modifier** — rats considered friends trigger the repetition debuff much slower for social activities. Working physically adjacent to a friend never counts toward repetition — it always registers as fresh.
 
-**Friendship modifier** — rats considered friends trigger the repetition debuff much slower for social activities. Working physically adjacent to a friend (side by side, not just same job) never counts toward repetition at all — it always registers as fresh.
+#### Urgency Curves
 
-### Urgency Curves
-
-`need_urgency` in the action selection formula is not the raw need value — it is the raw value passed through a per-need urgency curve. The curve determines how much weight a need carries at any point on the -100 to 100 scale.
+`need_urgency` in the action selection formula is not the raw need value. It is the raw value passed through a per-need urgency curve that determines how much weight a need carries at any point on the scale.
 
 | Need | Curve shape |
 |---|---|
@@ -100,21 +121,13 @@ Each need tracks its last fulfillment source. Repeating the same source yields d
 
 Needs do not directly represent mood. They feed into stress.
 
----
-
-## Vices
+### Vices & Addiction
 
 Each rat is generated with one primary vice, weighted by personality with enough chaos to produce misfits. Additional vices can be acquired during play as a result of prolonged high stress.
 
 **Vice list:** `smoking`, `drinking`, `drugs`, `sex`, `gambling`, `fighting`
 
-### Addiction
-
-Each rat has an addiction level per vice, 0–100. Starts at 0 for vices they don't have.
-
-- Addiction level multiplies how urgently `vice_satisfaction` decays and how much relief using the vice provides.
-- Usage increases addiction at the vice's `addiction_escalation_rate`.
-- Abstinence decreases it at the vice's `addiction_decay_rate` — varies significantly by vice type.
+Addiction level multiplies how urgently `vice_satisfaction` decays and how much relief using the vice provides. Usage increases addiction at the vice's `addiction_escalation_rate`. Abstinence decreases it at the `addiction_decay_rate` — varies significantly by vice type.
 
 | Vice | Escalation | Decay |
 |---|---|---|
@@ -127,69 +140,63 @@ Each rat has an addiction level per vice, 0–100. Starts at 0 for vices they do
 
 The owner provides or withholds vices. Providing them satisfies needs and improves relationship short-term. Addiction escalates over time, making the rat more expensive and more dependent. Withholding raises stress and degrades the relationship.
 
----
+### Stress
 
-## Stress
-
-Tracked stat, 0–100. 0 = fine, 100 = breaking point. Always negative — there is no positive stress.
+Tracked stat, 0-100. 0 = fine, 100 = breaking point. Always negative — there is no positive stress.
 
 Stress feeds into all calculations continuously. A rat at 60 stress is already performing worse, socializing differently, and consuming more vice. 100 is not the start of the problem, it is the end of a long slope.
 
-### Accumulation
+#### Accumulation
 
 Stress increases from:
 - Unmet needs (negative need values), weighted by severity
 - Repeated fulfillment from the same source (diminishing returns tipping into stress)
 - Prolonged assignment to the same job — variety is required, not just need satisfaction
-- Bad rat-to-rat interactions (defined in rat-to-rat section)
+- Bad rat-to-rat interactions
 - Hostile owner actions — may trigger an immediate roll rather than gradual accumulation
 
 `temper` is the accumulation multiplier. Same inputs, faster stress gain for a high-temper rat.
 
 `owner_relationship` also feeds into accumulation rate — a rat with a bad owner relationship accumulates stress faster from the same conditions.
 
-### Decay
+#### Decay
 
 Stress decreases from:
 - Met needs
 - Vices — the fastest and most potent stress relief in the simulation. This creates the core feedback loop: stress → vice → addiction → abstinence stress → vice.
 
-### Breaking Point
+#### Breaking Point
 
-When stress reaches 100, roll for a mood state. Personality and owner relationship weight the outcome:
+When stress reaches 100, roll for a crisis state. Personality and owner relationship weight the outcome:
 - High `temper` + low `owner_relationship` skews toward **rebellion**
 - Prolonged overwork and unmet needs skews toward **burnout**
 
-More mood states may be added later. The roll mechanic leaves room for expansion.
+More crisis states may be added later. The roll mechanic leaves room for expansion.
 
----
+### Crisis States
 
-## Mood States
+Discrete conditions a rat can fall into when stress hits 100 and the breaking point roll triggers. Entry is probabilistic — personality stats and owner relationship weight the outcome.
 
-Discrete conditions a rat can fall into when stress hits 100 and the breaking point roll triggers. Entry is probabilistic — personality stats and owner relationship weight the outcome. More states may be added later.
-
-### Burnout
+#### Burnout
 
 - **Entry:** Prolonged overwork and unmet needs skews the breaking point roll toward burnout.
 - **Visibility:** Obvious. The owner can clearly see a burned out rat. He should know to rest it.
 - **Effect:** Stress locked at 100. `vice_satisfaction` and `energy` decrease faster. Job performance multiplier severely reduced. Self-reinforcing — unmet needs keep stress at max.
-- **Extra stress:** If the owner continues to assign work to a burned out rat, a hidden `extra_stress` attribute accumulates. If `extra_stress` maxes out, the rat dies. Death triggers a colony-wide mood event — significant owner relationship hit for every rat.
+- **Extra stress:** If the owner continues to assign work to a burned out rat, `extra_stress` accumulates. If it maxes out, the rat dies. Death triggers a colony-wide owner relationship hit.
 - **Recovery:** Prolonged rest and need satisfaction. Slow. The owner must pull the rat off work.
 
-### Rebellion
+#### Rebellion
 
 - **Entry:** Low owner relationship skews the breaking point roll toward rebellion. High `temper` and high `ambition` increase probability.
 - **Visibility:** Partial. The owner gets environmental tells — pamphlets, ribbons, propaganda. The behavioral tell is a previously difficult rat becoming suspiciously compliant and productive. No direct readout.
 - **Effect:** The rat enters organizer mode. It continues working to avoid detection while actively trying to radicalize other rats. Organizing effectiveness is determined by the rat's `socialness` and `ambition`.
-- **Radicalization:** Each rat has a hidden `radicalization` attribute. The organizer raises it in nearby rats over time. Susceptibility to radicalization is determined by the target rat's stats — high `socialness`, `ambition`, `temper`, and `greed` increase susceptibility. High `laziness` reduces it.
+- **Radicalization:** The organizer raises `radicalization` in nearby rats over time. Susceptibility is determined by the target rat's stats — high `socialness`, `ambition`, `temper`, and `greed` increase susceptibility. High `laziness` reduces it.
 - **Escalation:** As radicalization spreads, environmental tells increase. Early signs are subtle. Later signs are unmistakable. If the owner doesn't intervene the rebellion can become colony-wide.
 - **Recovery:** Owner must intervene — isolate or remove the organizer. Removal is the union-busting move but does not undo radicalization already spread. If colony conditions remain bad, another rat may pick up the organizing role.
 
-The owner's tools against mood states are the same as always: job assignment, proximity control, vice and food provision. They are blunt and have side effects.
+The owner's tools against crisis states are the same as always: job assignment, proximity control, vice and food provision. They are blunt and have side effects.
 
----
-
-## Owner Relationship
+### Owner Relationship
 
 Each rat has a relationship score with the owner, -100 to 100.
 
@@ -201,17 +208,19 @@ The relationship score is the primary compliance multiplier on `employment_press
 
 `ambition` is always directed at the owner axis — positively or negatively depending on where the relationship sits.
 
-### Colony Relationship
+#### Colony Relationship
 
 Derived bottom-up as a simple average of all individual scores. The colony score is what the player can observe. Individual scores are the reality underneath.
 
 ---
 
-## Action Selection
+## Decision-Making
+
+### Action Selection
 
 Each tick, a rat evaluates all reachable locations and rat broadcasts and picks the highest scoring one. There is no return-to-post default — after every completed action the rat re-evaluates from scratch. `employment_pressure` on the job location is always competing, pulling the rat back to work passively.
 
-### Flow
+#### Flow
 
 **1. Location broadcasts**
 Each reachable location emits a tag set of raw stat effects:
@@ -231,14 +240,14 @@ Evaluate who is currently at this location:
 - Inebriated adjacent rats degrade the location score and pod performance
 - Scales with evaluating rat's `socialness`
 
-**4. Mood state modifier**
+**4. Crisis state modifier**
 If rat is in burnout: suppress all tags except rest and vice.
 
 **5. Rat broadcasts**
 Rats themselves emit signals the evaluating rat scores:
 - **Social need broadcast** — scored by camaraderie, socialness of both rats, distance, shared adjacency group, current need state
 - **Group activity broadcast** (gambling, etc.) — same scoring
-- **Organizer broadcast** — scored by radicalization susceptibility, camaraderie, distance. Adjacency group proximity weights it toward the organizer's current group first, then outward. A rat observed across multiple pods on different days is a pod indicator flag for the owner.
+- **Organizer broadcast** — scored by radicalization susceptibility, camaraderie, distance. Adjacency group proximity weights it toward the organizer's current group first, then outward.
 
 **6. Stress distortion**
 Global skew proportional to stress level:
@@ -250,7 +259,7 @@ Global skew proportional to stress level:
 - Location-level: same job assigned too long, apply cumulative penalty to that job location
 
 **8. Score calculation**
-`sum(need_urgency[n] × modified_tag_value[n])` across all needs. Health and inebriation included as need-like inputs with locations advertising their effects on those stats.
+`sum(need_urgency[n] x modified_tag_value[n])` across all needs. Health and inebriation included as need-like inputs.
 
 **9. Variance**
 Small random factor added to final score.
@@ -258,20 +267,18 @@ Small random factor added to final score.
 **10. Selection**
 Rat moves toward highest scoring location or rat broadcaster.
 
----
-
-## Location Advertising
+### Location Advertising
 
 Each location emits a tag set of stat effects. The rat's action selection algorithm scores all reachable locations each tick and picks the highest.
 
-### Job Locations
+#### Job Locations
 
 Each job site emits:
 - `employment_pressure` — base pull toward work, scaled by `owner_relationship`
 - `skill_progression` — slow ambition-dependent satisfaction from improving at the job
 - Job-specific need effects — bartender work advertises social and stimulation, dishwasher advertises neither
 
-### Employment Pressure
+#### Employment Pressure
 
 `employment_pressure` has a base value on all job locations at all times — the passive pull back to work after every completed action.
 
@@ -280,18 +287,18 @@ The owner can spike it temporarily — a shout, a presence, a threat. The spike 
 - Delayed cost: `owner_relationship` worsens per rat, stress increases per rat, scaled by current relationship — a rat at -60 is hurt more than a rat at +60
 - Overuse stacks relationship damage and stress until the tool backfires
 
-### Vice Locations
+#### Vice Locations
 
-Vices have associated locations. Rats physically absent from the kitchen have zero job output.
+Vices pull rats into the abstract activity space — physically absent from the kitchen, zero job output. The spatial rendering of vice locations is unresolved and deferred. See Open Questions.
 
-| Vice | Location | Notes |
-|---|---|---|
-| `smoking` | Open window or outside | Negatively impacts food quality if rat is cooking or serving while smoking. Owner and health inspector react negatively. |
-| `drinking` | Anywhere | Accumulates `inebriation`. Job performance degrades with inebriation level. Heavy drinking causes hangovers that carry into the next shift. |
-| `drugs` | Alleyway or outside | Treated as joints. Affects adjacent rats passively — nearby rats receive effects whether they want to or not. Tracked via `inebriation`. |
-| `sex` | Alleyway | Rat is absent from kitchen. |
-| `gambling` | Alleyway | Rat is absent from kitchen. |
-| `fighting` | Alleyway | Rat is absent from kitchen. Reduces `health` of participants. |
+| Vice | Notes |
+|---|---|
+| `smoking` | Negatively impacts food quality if rat is cooking or serving while smoking. |
+| `drinking` | Accumulates `inebriation`. Job performance degrades with inebriation level. Heavy drinking causes hangovers that carry into the next shift. |
+| `drugs` | Affects adjacent rats passively — nearby rats receive effects whether they want to or not. Tracked via `inebriation`. |
+| `sex` | Rat is absent from kitchen. |
+| `gambling` | Rat is absent from kitchen. |
+| `fighting` | Rat is absent from kitchen. Reduces `health` of participants. |
 
 ---
 
@@ -311,7 +318,7 @@ Minimum 11 rats to fully staff. Understaffing leaves pods incomplete — pod per
 
 ### Job Skills
 
-Each rat has a `job_skills` dictionary, one value per job, 0–10. Skills are permanent once learned — they do not decay.
+Each rat has a `job_skills` dictionary, one value per job, 0-10. Skills are permanent once learned — they do not decay.
 
 **On generation:** Each job skill is rolled randomly, seeded by personality fit. High-ambition rats roll higher on head cook and line cook. High-socialness rats roll higher on bartender.
 
@@ -320,7 +327,7 @@ Each rat has a `job_skills` dictionary, one value per job, 0–10. Skills are pe
 ### Job Performance
 
 ```
-performance = job_skill × personality_fit_modifier × current_state_modifier
+performance = job_skill x personality_fit_modifier x current_state_modifier
 ```
 
 - `personality_fit_modifier` — how well the rat's stats match the job's key attributes
@@ -374,31 +381,29 @@ If the recipient flees, a chase begins. Fight outcome feeds back into camaraderi
 
 ---
 
-## Owner-Facing Stats
+## Observability
 
-Owner-facing stats are not a UI dashboard. They are a formalization of what the owner can visually observe — communicated through art and animation. Everything else is hidden.
+Owner-facing signals are not a UI dashboard. They are a formalization of what the owner can visually observe — communicated through art and animation. All values below are either calculated per-tick or derived; nothing here is stored on the rat directly.
 
-### Rat Level
-
-Individual simulation unit. Stores all internal stats. Exposes only two signals visually:
+### Rat-Level Signals
 
 | Signal | What it reflects |
 |---|---|
 | `mood` | Visible emotional state — driven by stress and need levels. A rat in rebellion actively suppresses this signal. |
 | `health` | Visible physical condition — driven by the `health` stat. |
 
-### Pod Level
+### Pod-Level Signals
 
-No stored state. Calculated each tick from member rats. Exposes:
+Calculated each tick from member rats. Not stored.
 
 | Signal | What it reflects |
 |---|---|
-| `pod_performance` | Functional output of the pod — is the food going out, are the drinks being made. Averaged from individual performance values modified by group dynamics. |
-| `pod_indicators` | One or two sentences describing the pod vibe. Environmental and behavioral signals — e.g. "This pod is functioning smoothly", "Cigarettes go missing near this pod frequently", "There is tension here." Backed by visual signals. Deliberately ambiguous — the owner must interpret them. |
+| `pod_performance` | Functional output of the pod. Averaged from individual performance values modified by group dynamics. |
+| `pod_indicators` | One or two sentences describing the pod vibe. Deliberately ambiguous. Backed by visual signals. |
 
-### Colony Level
+### Colony-Level Signals
 
-Stores `rat_count`. All other values calculated from all rats.
+Calculated from all rats. Only `rat_count` is stored.
 
 | Signal | What it reflects |
 |---|---|
@@ -413,3 +418,4 @@ Stores `rat_count`. All other values calculated from all rats.
 - Does the owner get any direct signal about colony relationship, or does he infer it from behavior?
 - Rebellion contagion threshold: is it purely socialness-gated, or does colony relationship also make rats susceptible?
 - Rat economy: does the owner pay rats in currency, or is the deal purely room and board?
+- How is the activity space rendered? Is it a separate screen, an off-screen abstraction with UI indicators, or something else?
