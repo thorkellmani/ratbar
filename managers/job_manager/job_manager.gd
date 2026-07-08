@@ -34,9 +34,10 @@ func assign_job(rat: Rat, job: JobConstants.JOB) -> void:
 
 func clear_all_jobs() -> void:
 	#what happens when all jobs are unassigned?
-	var rats: Array[Rat] = Colony.rats.values()
+	var rats: Array[Rat] = Colony.colony.values()
 	for rat in rats:
 		rat.update_assigned_job(JobConstants.JOB.UNASSIGNED)
 
 func _on_assign_job_button_pressed() -> void:
-	assign_job(1, JobConstants.JOB.values().pick_random())
+	pass
+	#assign_job(1, JobConstants.JOB.values().pick_random())

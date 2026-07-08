@@ -28,7 +28,7 @@ var last_social_partner_id: int
 
 #region Stat functions
 
-func get_stat(accessor: String, key: String) -> float:
+func get_stat(accessor: String, key: int) -> float:
 	var dict = get(accessor)
 	return dict[key] if dict else NAN
 

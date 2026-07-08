@@ -36,7 +36,7 @@ func generate_rat() -> void:
 
 	add_child(rat)
 	rat.global_position = $RatGenerateMarker.global_position
-	Colony.rats[rat.id] = rat
+	Colony.colony[rat.id] = rat
 
 func navigate_to_job() -> void:
 	# if not at_job, go to job.
@@ -52,4 +52,4 @@ func _on_job_manager_navigate_to_job(rat: Rat, coords: Vector2) -> void:
 	print("navigating to job")
 	# create navigation manager in MAIN
 	# just teleport for now+
-	Colony.rats[rat.id].global_position = coords
+	Colony.colony[rat.id].global_position = coords
