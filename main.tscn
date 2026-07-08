@@ -46,7 +46,9 @@ position = Vector2(510, 522)
 [node name="Kitchen" parent="." instance=ExtResource("1_0xm2m")]
 layer = -1
 
-[node name="DebugPanel" parent="." instance=ExtResource("6_272bh")]
+[node name="DebugUI" parent="." instance=ExtResource("6_272bh")]
 visible = false
+offset_right = 0.0
+offset_bottom = 0.0
 
 [connection signal="navigate_to_job" from="JobManager" to="RatManager" method="_on_job_manager_navigate_to_job"]

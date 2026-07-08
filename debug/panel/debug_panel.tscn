@@ -2,10 +2,17 @@
 
 [ext_resource type="Script" uid="uid://hktebjtq7alh" path="res://debug/panel/debug_panel.gd" id="1_426e4"]
 
-[node name="DebugPanel" type="VBoxContainer"]
-offset_left = 23.0
-offset_top = 29.0
-offset_right = 192.0
-offset_bottom = 611.0
-mouse_filter = 2
+[node name="DebugUI" type="CanvasLayer"]
 script = ExtResource("1_426e4")
+
+[node name="Scroller" type="ScrollContainer" parent="."]
+anchors_preset = -1
+anchor_right = 1.115
+anchor_bottom = 1.0
+offset_right = -1284.48
+offset_bottom = -48.0
+horizontal_scroll_mode = 0
+
+[node name="Panel" type="VBoxContainer" parent="Scroller"]
+layout_mode = 2
+mouse_filter = 2
