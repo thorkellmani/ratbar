@@ -3,8 +3,6 @@ extends CanvasLayer
 signal assign_job_requested
 signal generate_rat_requested
 
-var action_row := preload("res://debug/panel_button/panel_button.tscn")
-
 var _rat: Rat
 
 # Dictionary mapping stat keys to their corresponding LineEdit inputs.
@@ -18,8 +16,6 @@ var actions := {
 		"signal": generate_rat_requested,
 	},
 }
-
-
 # _rat of the moment of invocation, not initalization
 var debug_panel_structure: Dictionary[String, Callable] = {
 	"Personality": func():
@@ -72,6 +68,12 @@ var debug_panel_structure: Dictionary[String, Callable] = {
 		return result
 }
 
+func generate_button(label: String, callback: Callable) -> Button:
+	var button: Button = Button.new()
+	button.text = label
+	button.pressed.connect(callback)
+	return button
+
 
 func _initialize() -> void:
 	for group_name in debug_panel_structure:
@@ -85,12 +87,8 @@ func _initialize() -> void:
 			debug_panel_group.add_child_row(stat_name, group_functions["get"], group_functions["set"])
 
 	for action in actions:
-		var button: Button = action_row.instantiate()
-		$Scroller/Panel.add_child(button)
-		button.text = actions[action].label
-		button.pressed.connect(func():
-			actions[action].signal.emit()
-		)
+		$Scroller/Panel.add_child(generate_button(actions[action].label, func(): actions[action].signal.emit()))
+	$Scroller/Panel.add_child(TimeButton.new())
 
 func _update() -> void:
 	for child in $Scroller/Panel.get_children():

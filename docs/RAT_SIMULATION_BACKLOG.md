@@ -25,7 +25,6 @@ Godot has no automated test runner — verification is done by running the scene
   - [x] radicalization
   - [x] extra_stress
   - [x] owner_relationship
-  - [ ] primary_vice
   - [ ] addiction per vice
   - [x] crisis_state
   - [x] assigned_job
@@ -43,7 +42,7 @@ Godot has no automated test runner — verification is done by running the scene
 **Test:** Set `stress` to 100 via the override input. Confirm the rat's `crisis_state` changes to BURNOUT or REBELLION. Set `nutrition` to -80. Confirm the need decay and action selection reflect the new value immediately.
 
 ### 0.3 Simulation speed control
-- [ ] A debug control allows time-scaling the simulation (0.5×, 1×, 2×, 5×, 10×) so decay and stress tests can be verified in a reasonable amount of real time
+- [x] A debug control allows time-scaling the simulation (0.5×, 1×, 2×, 5×, 10×) so decay and stress tests can be verified in a reasonable amount of real time
 
 **Test:** Set time scale to 10×. One in-game shift should complete in roughly 1/10th of normal wall-clock time. Stats (nutrition, energy, stress) should decay at the same in-game rate as normal speed — just faster in real time.
 
@@ -75,12 +74,11 @@ Godot has no automated test runner — verification is done by running the scene
 
 **Test:** Generate 20 rats. High-ambition rats (ambition > 50) should average higher cook skill than low-ambition rats (ambition < -50). Print comparison.
 
-### 1.5 Vice and addiction
-- [ ] Add `primary_vice: Constants.VICE`
-- [ ] Add `addiction: Dictionary[Constants.VICE, float]` (0–100 per vice, starts 0)
-- [ ] Assign primary vice on generation weighted by personality
+### 1.5 Vice weighting
+- [x] Per-vice addiction is tracked via `RatVice`'s own fields (`smoking`/`drinking`/`drugs`/`sex`/`gambling`/`fighting`, 0–100 each) — no separate `addiction` dictionary needed, and no separate `primary_vice` identity field; generation elevates one `RatVice` field directly instead
+- [ ] Generation-time vice elevation should be weighted by personality — currently a uniform random pick (see vice generation logic)
 
-**Test:** Generate 10 rats. Every rat has exactly one primary_vice. All addiction values are 0. High-stress rats rerolled with higher temper should skew toward fighting/drugs — test by forcing temper=100 on 10 rats and checking the vice distribution.
+**Test:** Generate 20 rats. High-temper rats should have `fighting`/`drugs` elevated at generation more often than low-temper rats. Print vice distribution grouped by temper.
 
 ### 1.6 Camaraderie
 - [ ] Add `camaraderie: Dictionary[int, float]` (rat_id → -100 to 100)
@@ -345,22 +343,22 @@ Godot has no automated test runner — verification is done by running the scene
 - [ ] Using a vice:
   - [ ] Raises `vice_satisfaction`
   - [ ] Decreases stress
-  - [ ] Increases `addiction[primary_vice]`
+  - [ ] Increases that vice's own `RatVice` field (e.g. using smoking raises `vice.smoking` directly, not a lookup via `primary_vice`)
 - [ ] Inebriation-inducing vices (drinking, drugs) also raise `inebriation`
 
-**Test:** Rat uses their vice. Before/after: `vice_satisfaction` increases, `stress` decreases, `addiction[primary_vice]` increases. If vice is drinking/drugs, `inebriation` also increases.
+**Test:** Rat uses a specific vice. Before/after: `vice_satisfaction` increases, `stress` decreases, that vice's own `RatVice` field increases. If vice is drinking/drugs, `inebriation` also increases.
 
 ### 8.2 Addiction decay during abstinence
-- [ ] `addiction` decays over time without use, at vice-specific rates
+- [ ] Each `RatVice` field decays over time without use, at vice-specific rates
 - [ ] Drugs decay very slowly, fighting decays moderately
 
-**Test:** Set addiction=50 for a rat's primary vice. Leave the rat without access to the vice for two full shifts. Addiction should be lower. Run the same test for two vice types with different decay rates (e.g. smoking vs drugs) — drugs should decay less.
+**Test:** Set a rat's `vice.drugs` to 50. Leave the rat without access for two full shifts — it should be lower. Run the same test for a faster-decaying vice (e.g. smoking) over the same period — smoking should decay more than drugs.
 
 ### 8.3 Withholding vice raises stress and degrades owner_relationship
-- [ ] When a rat cannot access their vice, `vice_satisfaction` drops below 0, which contributes to stress
+- [ ] When a rat cannot access a vice it's addicted to (a high value on that `RatVice` field), `vice_satisfaction` drops below 0, which contributes to stress
 - [ ] Owner_relationship worsens proportional to deprivation duration
 
-**Test:** Addicted rat (addiction=60). Remove access to their vice for one full shift. Confirm `vice_satisfaction` is negative, `stress` has increased, `owner_relationship` is lower than at shift start.
+**Test:** Rat with `vice.drugs` = 60. Remove access to drugs for one full shift. Confirm `vice_satisfaction` is negative, `stress` has increased, `owner_relationship` is lower than at shift start.
 
 ### 8.4 Inebriation degrades job performance
 - [ ] `inebriation` is a negative factor in `current_state_modifier`
