@@ -48,7 +48,7 @@ var debug_panel_structure: Dictionary[String, Callable] = {
 		return result,
 	"Job skills": func():
 		var result := {}
-		for stat_name in _rat._job_skills.get_keys():
+		for stat_name in _rat.job_skills.get_keys():
 			result[stat_name] = {
 				"get": func(): return _rat._job_skills.get(stat_name),
 				"set": func(value): _rat._job_skills.set(stat_name, value),
