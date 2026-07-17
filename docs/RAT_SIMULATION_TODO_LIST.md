@@ -24,21 +24,21 @@ Godot has no automated test runner — verification is done by running the scene
   - [x] inebriation
   - [x] radicalization
   - [x] extra_stress
-  - [ ] owner_relationship
+  - [x] owner_relationship
   - [ ] primary_vice
   - [ ] addiction per vice
-  - [ ] crisis_state
-  - [ ] assigned_job
-  - [ ] job_skills per job
+  - [x] crisis_state
+  - [x] assigned_job
+  - [x] job_skills per job
 - [x] Clicking another rat switches the panel to that rat; clicking the same rat closes it
 
 **Test:** Run the scene. Click a rat. Panel appears with readable stat values that update live. Change a stat via a cheat input or direct GDScript — panel reflects the change immediately. Click a second rat — panel switches. Click empty space or same rat — panel closes.
 
 ### 0.2 Rat stat override (cheat input)
-- [ ] LineEdit `text_submitted` signal connected for each stat row
-- [ ] On submission, look up which stat the LineEdit belongs to (accessor + enum key)
-- [ ] Write new value back to the rat via the appropriate update function
-- [ ] Clamp submitted value to the valid range for that stat before writing
+- [x] LineEdit `text_submitted` signal connected for each stat row
+- [x] On submission, look up which stat the LineEdit belongs to (accessor + enum key)
+- [x] Write new value back to the rat via the appropriate update function
+- [x] Clamp submitted value to the valid range for that stat before writing
 
 **Test:** Set `stress` to 100 via the override input. Confirm the rat's `crisis_state` changes to BURNOUT or REBELLION. Set `nutrition` to -80. Confirm the need decay and action selection reflect the new value immediately.
 

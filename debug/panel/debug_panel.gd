@@ -46,6 +46,14 @@ var debug_panel_structure: Dictionary[String, Callable] = {
 				"set": func(value): _rat.status.set(stat_name, value),
 			}
 		return result,
+	"Job skills": func():
+		var result := {}
+		for stat_name in _rat._job_skills.get_keys():
+			result[stat_name] = {
+				"get": func(): return _rat._job_skills.get(stat_name),
+				"set": func(value): _rat._job_skills.set(stat_name, value),
+			}
+		return result,
 	"Vice": func():
 		var result := {}
 		for stat_name in _rat.vice.get_keys():
