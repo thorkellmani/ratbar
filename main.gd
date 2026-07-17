@@ -8,5 +8,7 @@ func _ready() -> void:
 		$DebugUI.assign_job_requested.connect($JobManager._on_assign_job_button_pressed)
 		$DebugUI.generate_rat_requested.connect($RatManager.generate_rat)
 
+	$RatManager.generate_rat()
+
 func _on_rat_clicked(rat: Rat) -> void:
 	$DebugUI.inspect_rat(rat)

@@ -1,0 +1,53 @@
+[gd_resource type="Resource" script_class="GenerationDefaults" load_steps=13 format=3 uid="uid://cvabg7g65dos1"]
+
+[ext_resource type="Script" uid="uid://3uqidmh2xpcd" path="res://entities/rat/stats/job_skills.gd" id="1_0dd36"]
+[ext_resource type="Script" uid="uid://r3ooyry46w6v" path="res://entities/rat/generation_defaults.gd" id="1_47u75"]
+[ext_resource type="Script" uid="uid://c6qin4lc6t6ov" path="res://entities/rat/stats/mood.gd" id="1_es7xx"]
+[ext_resource type="Script" uid="uid://bolq1rktb5ass" path="res://entities/rat/stats/status.gd" id="2_faaie"]
+[ext_resource type="Script" uid="uid://dnqrttbiwpfp6" path="res://entities/rat/stats/vice.gd" id="3_0dd36"]
+[ext_resource type="Script" uid="uid://ccmu3ooi8jhst" path="res://entities/rat/stats/personality.gd" id="4_faaie"]
+
+[sub_resource type="Resource" id="Resource_a6dpk"]
+script = ExtResource("1_0dd36")
+metadata/_custom_type_script = "uid://3uqidmh2xpcd"
+
+[sub_resource type="Resource" id="Resource_n0kf3"]
+script = ExtResource("1_es7xx")
+metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
+
+[sub_resource type="Resource" id="Resource_d823v"]
+script = ExtResource("2_faaie")
+health = 100.0
+metadata/_custom_type_script = "uid://bolq1rktb5ass"
+
+[sub_resource type="Resource" id="Resource_fbj1u"]
+script = ExtResource("3_0dd36")
+metadata/_custom_type_script = "uid://dnqrttbiwpfp6"
+
+[sub_resource type="Resource" id="Resource_0dd36"]
+script = ExtResource("4_faaie")
+greed = 35.0
+temper = 40.0
+socialness = 30.0
+ambition = 45.0
+laziness = 50.0
+metadata/_custom_type_script = "uid://ccmu3ooi8jhst"
+
+[sub_resource type="Resource" id="Resource_cp0j5"]
+script = ExtResource("4_faaie")
+greed = 40.0
+temper = 10.0
+socialness = 60.0
+ambition = -20.0
+laziness = 20.0
+metadata/_custom_type_script = "uid://ccmu3ooi8jhst"
+
+[resource]
+script = ExtResource("1_47u75")
+personality_mean = SubResource("Resource_cp0j5")
+personality_deviation = SubResource("Resource_0dd36")
+default_mood = SubResource("Resource_n0kf3")
+default_status = SubResource("Resource_d823v")
+default_vice = SubResource("Resource_fbj1u")
+default_job_skills = SubResource("Resource_a6dpk")
+metadata/_custom_type_script = "uid://r3ooyry46w6v"

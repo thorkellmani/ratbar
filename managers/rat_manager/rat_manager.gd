@@ -9,30 +9,11 @@ var selected_rat: Rat
 
 func generate_rat() -> void:
 	var rat: Rat = rat_scene.instantiate()
-	rat.id = next_rat_id
-	rat.title = "Rat " + str(next_rat_id)
+
+	rat.initialize(next_rat_id)
 
 	next_rat_id += 1
 	rat.rat_clicked.connect( func(x: Rat): rat_clicked.emit(x))
-
-	for rat_trait in RatConstants.TRAIT.values():
-		rat.personality[rat_trait] = randfn(RatConstants.TRAIT_MEAN[rat_trait], RatConstants.TRAIT_DEVIATION[rat_trait])
-
-	rat.mood = RatConstants.DEFAULT_MOOD.duplicate()
-	rat.status = RatConstants.DEFAULT_STATUS.duplicate()
-	rat.job_skills = RatConstants.DEFAULT_JOB_SKILLS.duplicate()
-	rat.vice = RatConstants.DEFAULT_VICE.duplicate()
-	rat.primary_vice = RatConstants.VICE.values().pick_random()
-	rat.crisis_state = RatConstants.CRISIS_STATE.UNAFFECTED
-	rat.job_state = RatConstants.JOB_STATE.IDLE
-	rat.assigned_job = JobConstants.JOB.UNASSIGNED
-	rat.currency = 0
-	rat.owner_relationship = 0
-
-	rat.last_nutrition_source = -1
-	rat.last_stimulation_source = -1
-	rat.last_social_activity = -1
-	rat.last_social_partner_id = -1
 
 	add_child(rat)
 	rat.global_position = $RatGenerateMarker.global_position

@@ -3,21 +3,11 @@ extends CanvasLayer
 signal assign_job_requested
 signal generate_rat_requested
 
-var stat_row := preload("res://debug/panel_row/debug_panel_stat_row.tscn")
 var action_row := preload("res://debug/panel_button/panel_button.tscn")
 
 var _rat: Rat
 
-var stat_groups := {
-	"Personality": {"accessor": "personality", "enum": RatConstants.TRAIT},
-	"Mood": {"accessor": "mood", "enum": RatConstants.MOOD},
-	"Status": {"accessor": "status", "enum": RatConstants.STATUS},
-	"Vice": {"accessor": "vice", "enum": RatConstants.VICE},
-}
-
 # Dictionary mapping stat keys to their corresponding LineEdit inputs.
-var _stat_inputs: Dictionary[String, LineEdit] = {}
-
 var actions := {
 	"ASSIGN_JOB": {
 		"label": "Assign Job",
@@ -29,25 +19,62 @@ var actions := {
 	},
 }
 
-func _make_stat_key(panel: String, stat: String) -> String:
-	return panel + '-' + stat
 
-# Called when the node enters the scene tree for the first time.
-func _ready() -> void:
-	for stat_group in stat_groups:
-		var ui_stat_group_container := FoldableContainer.new()
-		var vBox := VBoxContainer.new()
-		$Scroller/Panel.add_child(ui_stat_group_container)
-		ui_stat_group_container.title = stat_group
-		ui_stat_group_container.folded = true
-		ui_stat_group_container.add_child(vBox)
+# _rat of the moment of invocation, not initalization
+var debug_panel_structure: Dictionary[String, Callable] = {
+	"Personality": func():
+		var result := {}
+		for stat_name in _rat.personality.get_keys():
+			result[stat_name] = {
+				"get": func(): return _rat.personality.get(stat_name),
+				"set": func(value): _rat.personality.set(stat_name, value),
+			}
+		return result,
+	"Mood": func():
+		var result := {}
+		for stat_name in _rat.mood.get_keys():
+			result[stat_name] = {
+				"get": func(): return _rat.mood.get(stat_name),
+				"set": func(value): _rat.mood.set(stat_name, value),
+			}
+		return result,
+	"Statuses": func():
+		var result := {}
+		for stat_name in _rat.status.get_keys():
+			result[stat_name] = {
+				"get": func(): return _rat.status.get(stat_name),
+				"set": func(value): _rat.status.set(stat_name, value),
+			}
+		return result,
+	"Vice": func():
+		var result := {}
+		for stat_name in _rat.vice.get_keys():
+			result[stat_name] = {
+				"get": func(): return _rat.vice.get(stat_name),
+				"set": func(value): _rat.vice.set(stat_name, value),
+			}
+		return result,
+	"Other": func():
+		var result := {}
+		for key in _rat.other.get_keys():
+			result[key] = {
+				"get": func(): return _rat.other.get(key),
+				"set": func(value): _rat.other.set(key, value)
+			}
+		return result
+}
 
-		for stat in stat_groups[stat_group]["enum"]:
-			var ui_stat_row: DebugPanelStatRow =  stat_row.instantiate()
-			vBox.add_child(ui_stat_row)
-			var stat_key:= _make_stat_key(stat_groups[stat_group].accessor, stat)
-			_stat_inputs[stat_key] = ui_stat_row.value
-			ui_stat_row.label.text = stat
+
+func _initialize() -> void:
+	for group_name in debug_panel_structure:
+		var rat_stat_group = debug_panel_structure[group_name].call()
+		var debug_panel_group: DebugPanelGroup = DebugPanelGroup.new()
+		debug_panel_group.title = group_name
+		$Scroller/Panel.add_child(debug_panel_group)
+
+		for stat_name in rat_stat_group:
+			var group_functions: Dictionary = rat_stat_group[stat_name]
+			debug_panel_group.add_child_row(stat_name, group_functions["get"], group_functions["set"])
 
 	for action in actions:
 		var button: Button = action_row.instantiate()
@@ -57,18 +84,36 @@ func _ready() -> void:
 			actions[action].signal.emit()
 		)
 
-func inspect_rat(rat: Rat) -> void:
-	_rat = rat
-
-	if !visible:
-		visible = true
-
-	_update()
-
 func _update() -> void:
-	for group in stat_groups:
-		var accessor: String = stat_groups[group]["accessor"]
-		var enum_dict: Dictionary = stat_groups[group]["enum"]
-		for stat in enum_dict:
-			var stat_key = _make_stat_key(accessor, stat)
-			_stat_inputs[stat_key].text = "%.0f" % _rat.get_stat(accessor, enum_dict[stat])
+	for child in $Scroller/Panel.get_children():
+		if child is DebugPanelGroup:
+			child.update()
+
+func _connect_signals() -> void:
+	_rat.mood.stat_changed.connect(_update)
+	_rat.personality.stat_changed.connect(_update)
+	_rat.status.stat_changed.connect(_update)
+	_rat.vice.stat_changed.connect(_update)
+	_rat.job_skills.stat_changed.connect(_update)
+	_rat.other.stat_changed.connect(_update)
+
+func _disconnect_signals() -> void:
+	_rat.mood.stat_changed.disconnect(_update)
+	_rat.personality.stat_changed.disconnect(_update)
+	_rat.status.stat_changed.disconnect(_update)
+	_rat.vice.stat_changed.disconnect(_update)
+	_rat.job_skills.stat_changed.disconnect(_update)
+	_rat.other.stat_changed.disconnect(_update)
+
+func inspect_rat(rat: Rat) -> void:
+	if !_rat:
+		_rat = rat
+		_initialize()
+
+		visible = true
+	else:
+		_disconnect_signals()
+		_rat = rat
+
+	_connect_signals()
+	_update()

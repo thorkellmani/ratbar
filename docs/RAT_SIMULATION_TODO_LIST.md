@@ -3,20 +3,42 @@
 Each task is broken into atomic parts. Each part has a verification test.
 Godot has no automated test runner — verification is done by running the scene and observing the described outcome.
 
----
-
 ## 0. Debug Suite
 
 ### 0.1 Rat inspector overlay
 - [x] Clicking a rat in the scene opens a debug panel showing all internal stats in real time
 - [x] Panel updates each tick (no manual refresh needed)
-- [ ] Panel displays: all personality stats, all needs, stress, health, inebriation, owner_relationship, radicalization, extra_stress, primary_vice, addiction per vice, current crisis_state, current job assignment, job_skills per job
+- [ ] Panel displays:
+  - [x] greed
+  - [x] temper
+  - [x] socialness
+  - [x] ambition
+  - [x] laziness
+  - [x] nutrition
+  - [x] energy
+  - [x] stimulation
+  - [x] social
+  - [x] vice_satisfaction
+  - [x] stress
+  - [x] health
+  - [x] inebriation
+  - [x] radicalization
+  - [x] extra_stress
+  - [ ] owner_relationship
+  - [ ] primary_vice
+  - [ ] addiction per vice
+  - [ ] crisis_state
+  - [ ] assigned_job
+  - [ ] job_skills per job
 - [x] Clicking another rat switches the panel to that rat; clicking the same rat closes it
 
 **Test:** Run the scene. Click a rat. Panel appears with readable stat values that update live. Change a stat via a cheat input or direct GDScript — panel reflects the change immediately. Click a second rat — panel switches. Click empty space or same rat — panel closes.
 
 ### 0.2 Rat stat override (cheat input)
-- [ ] Debug panel includes an input field to directly set any stat to a value at runtime (for testing scenarios without waiting for natural game time)
+- [ ] LineEdit `text_submitted` signal connected for each stat row
+- [ ] On submission, look up which stat the LineEdit belongs to (accessor + enum key)
+- [ ] Write new value back to the rat via the appropriate update function
+- [ ] Clamp submitted value to the valid range for that stat before writing
 
 **Test:** Set `stress` to 100 via the override input. Confirm the rat's `crisis_state` changes to BURNOUT or REBELLION. Set `nutrition` to -80. Confirm the need decay and action selection reflect the new value immediately.
 
@@ -47,7 +69,9 @@ Godot has no automated test runner — verification is done by running the scene
 
 ### 1.4 Job skills dictionary
 - [x] Add `job_skills: Dictionary[Constants.JOB, float]` (0–10 per job)
-- [ ] Populate on generation with a random roll seeded by personality fit (high ambition → higher cook rolls, high socialness → higher bartender rolls)
+- [ ] Populate on generation with a random roll seeded by personality fit
+  - [ ] High ambition → higher head cook and line cook rolls
+  - [ ] High socialness → higher bartender rolls
 
 **Test:** Generate 20 rats. High-ambition rats (ambition > 50) should average higher cook skill than low-ambition rats (ambition < -50). Print comparison.
 
@@ -65,7 +89,11 @@ Godot has no automated test runner — verification is done by running the scene
 **Test:** Create two rats. Trigger a first-meeting between them. Both rats' camaraderie dictionaries contain the other's ID with a value between +5 and +15.
 
 ### 1.7 Fulfillment history
-- [ ] Add per-need last-source tracking: `last_nutrition_source`, `last_sleep_location`, `last_stimulation_source`, `last_social_activity`, `last_social_partner_id`
+- [ ] Add per-need last-source tracking:
+  - [ ] `last_nutrition_source`
+  - [ ] `last_stimulation_source`
+  - [ ] `last_social_activity`
+  - [ ] `last_social_partner_id`
 
 **Test:** After a rat eats at a specific food location, `last_nutrition_source` is set to that location's ID.
 
@@ -149,7 +177,8 @@ Godot has no automated test runner — verification is done by running the scene
 
 ### 4.2 Burnout effects
 - [ ] Stress locked at 100 while in burnout
-- [ ] `vice_satisfaction` and `energy` decay faster
+- [ ] `vice_satisfaction` decays faster
+- [ ] `energy` decays faster
 - [ ] Job performance multiplier severely reduced
 
 **Test:** Rat in BURNOUT. Stress cannot be reduced below 100. Compare energy decay rate to same rat not in burnout: burnout rat decays meaningfully faster. Measure job performance output — burnout rat should be well below baseline.
@@ -184,13 +213,25 @@ Godot has no automated test runner — verification is done by running the scene
 ## 5. Action Selection
 
 ### 5.1 Location broadcasts
-- [ ] Each location node emits a tag dictionary: `{nutrition, energy, stimulation, social, vice_satisfaction, stress, health, inebriation, skill_progression, employment_pressure}`
+- [ ] Each location node emits a tag dictionary:
+  - [ ] `nutrition`
+  - [ ] `energy`
+  - [ ] `stimulation`
+  - [ ] `social`
+  - [ ] `vice_satisfaction`
+  - [ ] `stress`
+  - [ ] `health`
+  - [ ] `inebriation`
+  - [ ] `skill_progression`
+  - [ ] `employment_pressure`
 
 **Test:** Print all broadcast values from at least three different location types (food, job, vice). Confirm each has a non-zero value for at least the tags relevant to that location type.
 
 ### 5.2 Personality modifier
 - [ ] Raw tag values are modified per rat based on personality stats before scoring
-- [ ] Lazy rats amplify rest/idle tags; social rats amplify social tags; ambitious rats amplify employment_pressure if owner_relationship is positive
+- [ ] Lazy rats amplify rest/idle tags
+- [ ] Social rats amplify social tags
+- [ ] Ambitious rats amplify `employment_pressure` if `owner_relationship` is positive
 
 **Test:** Two rats: one laziness=100, one laziness=-100. Both evaluate the same idle location. Lazy rat assigns higher score to the idle location. Social rats should score social locations higher than anti-social rats.
 
@@ -241,7 +282,12 @@ Godot has no automated test runner — verification is done by running the scene
 
 ### 6.3 Job performance formula
 - [ ] `performance = job_skill × personality_fit_modifier × current_state_modifier`
-- [ ] `current_state_modifier` reduced by negative needs, stress, inebriation, low health, burnout
+- [ ] `current_state_modifier` reduced by:
+  - [ ] Negative needs
+  - [ ] Stress
+  - [ ] Inebriation
+  - [ ] Low health
+  - [ ] Burnout
 
 **Test:** Same rat, max needs vs depleted needs. Performance should be measurably lower with depleted needs. Add stress=80 — performance drops further.
 
@@ -296,7 +342,10 @@ Godot has no automated test runner — verification is done by running the scene
 ## 8. Vice System
 
 ### 8.1 Vice usage fulfills vice_satisfaction and increases addiction
-- [ ] Using a vice: raises `vice_satisfaction`, decreases stress, increases `addiction[primary_vice]`
+- [ ] Using a vice:
+  - [ ] Raises `vice_satisfaction`
+  - [ ] Decreases stress
+  - [ ] Increases `addiction[primary_vice]`
 - [ ] Inebriation-inducing vices (drinking, drugs) also raise `inebriation`
 
 **Test:** Rat uses their vice. Before/after: `vice_satisfaction` increases, `stress` decreases, `addiction[primary_vice]` increases. If vice is drinking/drugs, `inebriation` also increases.
