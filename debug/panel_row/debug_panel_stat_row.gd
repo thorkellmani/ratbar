@@ -17,4 +17,8 @@ func bind(getter: Callable, setter: Callable) -> void:
 
 func update_field() -> void:
 	if _stat_getter is Callable and _stat_setter is Callable:
-		field_value.text =  "%.0f" % _stat_getter.call()
+		var stat = _stat_getter.call()
+		if stat is float or stat is int:
+			field_value.text = "%.0f" % stat
+		else:
+			field_value.text = str(stat)
