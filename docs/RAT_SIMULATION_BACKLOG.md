@@ -104,6 +104,12 @@ Godot has no automated test runner — verification is done by running the scene
 
 **Test:** Run the simulation for one in-game shift with a rat doing nothing. Confirm `nutrition` drops from 0 to below -40 by end of shift.
 
+### 2.1b Per-job nutrition modifier
+- [ ] Some jobs apply a passive nutrition modifier while the rat is working (e.g. cook roles get a slow positive nutrition offset from tasting food; other jobs do not)
+- [ ] Modifier is defined on the job type, not on the rat
+
+**Test:** Run a HEAD_COOK and a DISHWASHER for the same duration with identical starting nutrition. HEAD_COOK nutrition should decay slower (or tick upward slightly). DISHWASHER decays at baseline rate.
+
 ### 2.2 Energy decay
 - [ ] Energy decays while awake; faster while working
 
@@ -255,6 +261,12 @@ Godot has no automated test runner — verification is done by running the scene
 - [ ] Rat moves toward highest-scoring location
 
 **Test:** Force a rat to have nutrition=-80 (urgent hunger) and place a food source nearby. The rat should select the food location on the next tick. Print scores for all locations — food location score should be highest by a clear margin.
+
+### 5.6b Switching inertia
+- [ ] A rat only switches current action if the new top-scoring option exceeds the current score by a fixed threshold constant
+- [ ] Prevents jitter between two near-equal options without needing a timer
+
+**Test:** Set up two locations with nearly identical scores. Confirm the rat doesn't oscillate between them each tick. Widen the score gap past the threshold — confirm the rat switches cleanly.
 
 ### 5.7 Employment pressure
 - [ ] Job locations always emit a base `employment_pressure` tag
@@ -431,6 +443,8 @@ Godot has no automated test runner — verification is done by running the scene
 ---
 
 ## Deferred / Out of Scope for Now
+
+- **Signal bus / event bus** — needed eventually for push events (fight challenges, organizer broadcasts, owner pressure spikes). Core action selection uses smart-object polling instead; signal bus is for interrupts and rare event-driven behaviors only.
 
 - Pathfinding (currently teleporting — known placeholder)
 - Rat economy / currency system (design TBD)

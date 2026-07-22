@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://dxpm20igoillm"]
+[gd_scene load_steps=15 format=3 uid="uid://dxpm20igoillm"]
 
 [ext_resource type="PackedScene" uid="uid://bgh42503avk7q" path="res://kitchen.tscn" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://dn2bwf5drxhim" path="res://main.gd" id="1_lquwl"]
@@ -6,6 +6,34 @@
 [ext_resource type="Script" uid="uid://bedegktgbds81" path="res://managers/job_manager/job_manager.gd" id="4_1bvp3"]
 [ext_resource type="Script" uid="uid://cogu2jhsalh42" path="res://managers/rat_manager/rat_manager.gd" id="6_7mycd"]
 [ext_resource type="PackedScene" uid="uid://diubbu3d51vsp" path="res://debug/panel/debug_panel.tscn" id="6_272bh"]
+[ext_resource type="Script" uid="uid://mlu1ief5n0tu" path="res://managers/location_manager/location_manager.gd" id="7_272bh"]
+[ext_resource type="Script" uid="uid://c6cwtu6kw7u3d" path="res://entities/location/location.gd" id="8_kek77"]
+[ext_resource type="Script" uid="uid://c6qin4lc6t6ov" path="res://entities/rat/stats/mood.gd" id="9_4c57u"]
+
+[sub_resource type="Resource" id="Resource_efxa6"]
+script = ExtResource("9_4c57u")
+nutrition = 2.0
+metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
+
+[sub_resource type="Resource" id="Resource_dg77c"]
+script = ExtResource("9_4c57u")
+nutrition = 2.0
+metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
+
+[sub_resource type="Resource" id="Resource_ycdy4"]
+script = ExtResource("9_4c57u")
+nutrition = 2.0
+metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
+
+[sub_resource type="Resource" id="Resource_w48qg"]
+script = ExtResource("9_4c57u")
+nutrition = -2.0
+metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
+
+[sub_resource type="Resource" id="Resource_vivmo"]
+script = ExtResource("9_4c57u")
+nutrition = -1.0
+metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_lquwl")
@@ -14,28 +42,8 @@ script = ExtResource("1_lquwl")
 visible = false
 position = Vector2(449, 225)
 
-[node name="JobManager" type="Node" parent="." node_paths=PackedStringArray("head_cook_marker", "line_cook_marker", "prep_cook_marker", "dishwasher_marker", "bartender_marker")]
+[node name="JobManager" type="Node" parent="."]
 script = ExtResource("4_1bvp3")
-head_cook_marker = NodePath("HeadCookMarker")
-line_cook_marker = NodePath("LineCookMarker")
-prep_cook_marker = NodePath("PrepCookMarker")
-dishwasher_marker = NodePath("DishwasherMarker")
-bartender_marker = NodePath("BartenderMarker")
-
-[node name="HeadCookMarker" type="Marker2D" parent="JobManager"]
-position = Vector2(568, 269)
-
-[node name="LineCookMarker" type="Marker2D" parent="JobManager"]
-position = Vector2(920, 441)
-
-[node name="PrepCookMarker" type="Marker2D" parent="JobManager"]
-position = Vector2(324, 273)
-
-[node name="DishwasherMarker" type="Marker2D" parent="JobManager"]
-position = Vector2(803, 273)
-
-[node name="BartenderMarker" type="Marker2D" parent="JobManager"]
-position = Vector2(382, 442)
 
 [node name="RatManager" type="Node2D" parent="."]
 script = ExtResource("6_7mycd")
@@ -48,7 +56,41 @@ layer = -1
 
 [node name="DebugUI" parent="." instance=ExtResource("6_272bh")]
 visible = false
-offset_right = 0.0
-offset_bottom = 0.0
 
-[connection signal="navigate_to_job" from="JobManager" to="RatManager" method="_on_job_manager_navigate_to_job"]
+[node name="LocationManager" type="Node2D" parent="."]
+script = ExtResource("7_272bh")
+
+[node name="HeadCook" type="Marker2D" parent="LocationManager"]
+position = Vector2(568, 269)
+script = ExtResource("8_kek77")
+_job = 0
+_personality_modifiers = SubResource("Resource_efxa6")
+metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
+
+[node name="LineCook" type="Marker2D" parent="LocationManager"]
+position = Vector2(920, 441)
+script = ExtResource("8_kek77")
+_job = 1
+_personality_modifiers = SubResource("Resource_dg77c")
+metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
+
+[node name="PrepCook" type="Marker2D" parent="LocationManager"]
+position = Vector2(324, 273)
+script = ExtResource("8_kek77")
+_job = 2
+_personality_modifiers = SubResource("Resource_ycdy4")
+metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
+
+[node name="Dishwasher" type="Marker2D" parent="LocationManager"]
+position = Vector2(803, 273)
+script = ExtResource("8_kek77")
+_job = 3
+_personality_modifiers = SubResource("Resource_w48qg")
+metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
+
+[node name="Bartender" type="Marker2D" parent="LocationManager"]
+position = Vector2(382, 442)
+script = ExtResource("8_kek77")
+_job = 4
+_personality_modifiers = SubResource("Resource_vivmo")
+metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"

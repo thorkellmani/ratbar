@@ -1,4 +1,4 @@
-class_name RatStatus extends BaseStatGroup
+class_name Status extends BaseStatGroup
 
 func _init() -> void:
 	_min = 0

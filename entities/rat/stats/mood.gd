@@ -1,4 +1,4 @@
-class_name RatMood extends BaseStatGroup
+class_name Mood extends BaseStatGroup
 
 func _init() -> void:
 	_min = -100

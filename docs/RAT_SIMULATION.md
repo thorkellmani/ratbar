@@ -264,7 +264,10 @@ Global skew proportional to stress level:
 **9. Variance**
 Small random factor added to final score.
 
-**10. Selection**
+**10. Switching inertia**
+A rat does not switch to a new action unless the challenger's score exceeds the current action's score by a threshold. Prevents jitter when two options are approximately equal. The threshold is a fixed constant for now — a candidate for personality-driven variation later (e.g. a neurotic/anxious trait could lower it).
+
+**11. Selection**
 Rat moves toward highest scoring location or rat broadcaster.
 
 ### Location Advertising

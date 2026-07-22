@@ -1,4 +1,4 @@
-class_name RatPersonality extends BaseStatGroup
+class_name Personality extends BaseStatGroup
 
 func _init() -> void:
 	_min = -100
@@ -14,18 +14,15 @@ func _init() -> void:
 		temper = _clamp_value(value)
 		stat_changed.emit()
 
-
 @export var socialness: float:
 	set(value):
 		socialness = _clamp_value(value)
 		stat_changed.emit()
 
-
 @export var ambition: float:
 	set(value):
 		ambition = _clamp_value(value)
 		stat_changed.emit()
-
 
 @export var laziness: float:
 	set(value):

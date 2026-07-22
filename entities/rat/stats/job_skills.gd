@@ -1,4 +1,4 @@
-class_name RatJobSkills extends BaseStatGroup
+class_name JobSkills extends BaseStatGroup
 
 func _init() -> void:
 	_min = 0

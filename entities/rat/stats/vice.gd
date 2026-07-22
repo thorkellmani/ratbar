@@ -1,4 +1,4 @@
-class_name RatVice  extends BaseStatGroup
+class_name Vice  extends BaseStatGroup
 
 func _init() -> void:
 	_min = 0

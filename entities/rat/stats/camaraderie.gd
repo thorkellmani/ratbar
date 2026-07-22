@@ -1,4 +1,4 @@
-class_name RatCamaraderie extends BaseStatGroup
+class_name Camaraderie extends BaseStatGroup
 
 func _init() -> void:
 	_min = -100

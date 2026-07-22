@@ -3,6 +3,7 @@ extends Area2D
 class_name Rat
 
 signal rat_clicked(rat: Rat)
+signal need_reevaluation(rat: Rat)
 
 const DEFAULT_VALUES := preload("res://entities/rat/generation_defaults.tres")
 
@@ -10,13 +11,13 @@ const DEFAULT_VALUES := preload("res://entities/rat/generation_defaults.tres")
 var id: int
 
 var _title: String
-var _mood: RatMood
-var _personality: RatPersonality
-var _status: RatStatus
-var _vice: RatVice
-var _job_skills: RatJobSkills
-var _camaraderie: RatCamaraderie
-var _other: RatOther
+var _mood: Mood
+var _personality: Personality
+var _status: Status
+var _vice: Vice
+var _job_skills: JobSkills
+var _camaraderie: Camaraderie
+var _other: Other
 
 #TODO LATER
 #var last_nutrition_source: int = -1
@@ -25,25 +26,25 @@ var _other: RatOther
 #var last_social_partner_id: int = -1
 #endregion
 
-var personality: RatPersonality:
+var personality: Personality:
 	get: return _personality
 
-var mood: RatMood:
+var mood: Mood:
 	get: return _mood
 
-var status: RatStatus:
+var status: Status:
 	get: return _status
 
-var vice: RatVice:
+var vice: Vice:
 	get: return _vice
 
-var job_skills: RatJobSkills:
+var job_skills: JobSkills:
 	get: return _job_skills
 
-var camaraderie: RatCamaraderie:
+var camaraderie: Camaraderie:
 	get: return _camaraderie
 
-var other: RatOther:
+var other: Other:
 	get: return _other
 
 #endregion
@@ -58,7 +59,7 @@ func initialize(
 	id = idx
 	_title = "Rat " + str(id)
 
-	_personality = RatPersonality.new()
+	_personality = Personality.new()
 	_personality.greed = _randomize_personality_trait("greed")
 	_personality.temper = _randomize_personality_trait("temper")
 	_personality.socialness = _randomize_personality_trait("socialness")
@@ -69,10 +70,18 @@ func initialize(
 	_vice = DEFAULT_VALUES.default_vice.duplicate()
 	_mood = DEFAULT_VALUES.default_mood.duplicate()
 	_job_skills = DEFAULT_VALUES.default_job_skills.duplicate()
-	_camaraderie = RatCamaraderie.new()
-	_other = RatOther.new()
+	_camaraderie = Camaraderie.new()
+	_other = Other.new()
+
+	$DecisionPeriod.wait_time = RatConstants.DECISION_PERIOD
 
 
 func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		rat_clicked.emit(self)
+
+func _on_decision_period_timeout() -> void:
+	need_reevaluation.emit(self)
+	
+func reevaluate_needs(locations: Array[Location]) -> void:
+	print(locations)

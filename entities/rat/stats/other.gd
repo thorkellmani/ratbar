@@ -1,4 +1,4 @@
-class_name RatOther extends BaseStatGroup
+class_name Other extends BaseStatGroup
 
 @export var owner_relationship: float:
 	set(value):
