@@ -5,7 +5,7 @@ class_name Rat
 signal rat_clicked(rat: Rat)
 signal need_reevaluation(rat: Rat)
 
-const DEFAULT_VALUES := preload("res://entities/rat/generation_defaults.tres")
+const DEFAULT_VALUES := preload("res://entities/rat/generation_defaults/generation_defaults.tres")
 
 #region Local variables
 var id: int

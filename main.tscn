@@ -8,31 +8,51 @@
 [ext_resource type="PackedScene" uid="uid://diubbu3d51vsp" path="res://debug/panel/debug_panel.tscn" id="6_272bh"]
 [ext_resource type="Script" uid="uid://mlu1ief5n0tu" path="res://managers/location_manager/location_manager.gd" id="7_272bh"]
 [ext_resource type="Script" uid="uid://c6cwtu6kw7u3d" path="res://entities/location/location.gd" id="8_kek77"]
-[ext_resource type="Script" uid="uid://c6qin4lc6t6ov" path="res://entities/rat/stats/mood.gd" id="9_4c57u"]
+[ext_resource type="Script" uid="uid://c6qin4lc6t6ov" path="res://entities/rat/stats/mood/mood.gd" id="9_4c57u"]
 
 [sub_resource type="Resource" id="Resource_efxa6"]
 script = ExtResource("9_4c57u")
 nutrition = 2.0
+energy = null
+stimulation = null
+social = null
+vice_satisfaction = null
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
 
 [sub_resource type="Resource" id="Resource_dg77c"]
 script = ExtResource("9_4c57u")
 nutrition = 2.0
+energy = null
+stimulation = null
+social = null
+vice_satisfaction = null
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
 
 [sub_resource type="Resource" id="Resource_ycdy4"]
 script = ExtResource("9_4c57u")
 nutrition = 2.0
+energy = null
+stimulation = null
+social = null
+vice_satisfaction = null
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
 
 [sub_resource type="Resource" id="Resource_w48qg"]
 script = ExtResource("9_4c57u")
 nutrition = -2.0
+energy = null
+stimulation = null
+social = null
+vice_satisfaction = null
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
 
 [sub_resource type="Resource" id="Resource_vivmo"]
 script = ExtResource("9_4c57u")
 nutrition = -1.0
+energy = null
+stimulation = null
+social = null
+vice_satisfaction = null
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
 
 [node name="Main" type="Node2D"]

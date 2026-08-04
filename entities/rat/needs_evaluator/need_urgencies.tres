@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="NeedUrgencies" load_steps=5 format=3 uid="uid://dkavutvvhrf76"]
+
+[ext_resource type="Script" uid="uid://bl7y58reumro7" path="res://entities/rat/stats/mood/mood_urgency.gd" id="1_8encs"]
+[ext_resource type="Script" uid="uid://3411vrpptvy2" path="res://entities/rat/needs_evaluator/need_urgencies.gd" id="1_tfeai"]
+
+[sub_resource type="Curve" id="Curve_io38m"]
+_limits = [0.0, 1.0, -100.0, 100.0]
+_data = [Vector2(-100, 1), 0.0, 0.0, 0, 0, Vector2(-20.218575, 0.7191011), -0.00837703, -0.00837703, 0, 0, Vector2(33, 0.01), 0.0, 0.0, 0, 0, Vector2(100, 0.011), 0.0, 0.0, 0, 0]
+point_count = 4
+
+[sub_resource type="Resource" id="Resource_8sjpd"]
+script = ExtResource("1_8encs")
+nutrition = SubResource("Curve_io38m")
+metadata/_custom_type_script = "uid://bl7y58reumro7"
+
+[resource]
+script = ExtResource("1_tfeai")
+mood_urgencies = SubResource("Resource_8sjpd")
+metadata/_custom_type_script = "uid://3411vrpptvy2"
