@@ -15,11 +15,11 @@ This sprint is a deliberate simplification of the full backlog (sections 2/5/6) 
 
 ### Tasks
 
-- [ ] Build the nutrition `Curve` resource, matching the doc's described shape; confirm domain/range editability in the Inspector
-- [ ] Build a minimal test scene: one job-station location node (fixed position), one rat with an `assigned_job` set
-- [ ] Add a decision check (on a `Timer`) that samples the nutrition curve and combines it with the `employment_pressure` constant to decide work-vs-idle
-- [ ] Move the rat (teleport, existing placeholder) to the job station when the check resolves to "work"; set `job_state = WORKING` / `IDLE` accordingly
-- [ ] Some visible indicator of current `job_state` — the whole point is watchability
+- [x] Build the nutrition `Curve` resource, matching the doc's described shape; confirm domain/range editability in the Inspector
+- [x] Build a minimal test scene: one job-station location node (fixed position), one rat with an `assigned_job` set
+- [x] Add a decision check (on a `Timer`) that samples the nutrition curve and combines it with the `employment_pressure` constant to decide work-vs-idle
+- [x] Move the rat (teleport, existing placeholder) to the job station when the check resolves to "work"; set `job_state = WORKING` / `IDLE` accordingly
+- [x] Some visible indicator of current `job_state` — the whole point is watchability
 
 ### Test scenarios
 

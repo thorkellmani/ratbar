@@ -1,16 +1,12 @@
 extends CanvasLayer
 
-signal assign_job_requested
+signal assign_job_requested(rat: Rat, job: JobConstants.JOB)
 signal generate_rat_requested
 
 var _rat: Rat
 
 # Dictionary mapping stat keys to their corresponding LineEdit inputs.
 var actions := {
-	"ASSIGN_JOB": {
-		"label": "Assign Job",
-		"signal": assign_job_requested
-	},
 	"GENERATE_RAT": {
 		"label": "Generate Rat",
 		"signal": generate_rat_requested,
@@ -68,6 +64,15 @@ var debug_panel_structure: Dictionary[String, Callable] = {
 		return result
 }
 
+var assign_job_group = {
+	"Head cook": JobConstants.JOB.HEAD_COOK,
+	"Line cook": JobConstants.JOB.LINE_COOK,
+	"Prep cook": JobConstants.JOB.PREP_COOK,
+	"Dishwasher": JobConstants.JOB.DISHWASHER,
+	"Bartender": JobConstants.JOB.BARTENDER,
+	"Clear job": JobConstants.JOB.UNASSIGNED
+}
+
 func generate_button(label: String, callback: Callable) -> Button:
 	var button: Button = Button.new()
 	button.text = label
@@ -85,6 +90,17 @@ func _initialize() -> void:
 		for stat_name in rat_stat_group:
 			var group_functions: Dictionary = rat_stat_group[stat_name]
 			debug_panel_group.add_child_row(stat_name, group_functions["get"], group_functions["set"])
+
+	#assign job
+	var assign_job_panel_group = FoldableContainer.new()
+	var job_vbox = VBoxContainer.new()
+
+	assign_job_panel_group.title = "Assign Jobs"
+	$Scroller/Panel.add_child(assign_job_panel_group)
+	assign_job_panel_group.add_child(job_vbox)
+	for job in assign_job_group:
+		job_vbox.add_child(generate_button(job, func(): assign_job_requested.emit(_rat, assign_job_group[job])))
+
 
 	for action in actions:
 		$Scroller/Panel.add_child(generate_button(actions[action].label, func(): actions[action].signal.emit()))

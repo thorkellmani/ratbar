@@ -13,6 +13,7 @@ metadata/_custom_type_script = "uid://3uqidmh2xpcd"
 
 [sub_resource type="Resource" id="Resource_n0kf3"]
 script = ExtResource("2_2wjuq")
+nutrition = 80.0
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
 
 [sub_resource type="Resource" id="Resource_d823v"]

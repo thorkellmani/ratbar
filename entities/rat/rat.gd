@@ -82,6 +82,15 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 
 func _on_decision_period_timeout() -> void:
 	need_reevaluation.emit(self)
+
+func reevaluate_needs(job: JobConstants.JOB, locations: Array[Location]) -> void:
+	var intended_location: Location = NeedsEvaluator.evaluate(self, job, locations)
+	_move_to_location(intended_location)
 	
-func reevaluate_needs(locations: Array[Location]) -> void:
-	print(locations)
+func _move_to_location(location: Location) -> void:
+	print("moving to ", location._title)
+	if global_position != location.global_position:
+		global_position = location.global_position
+	
+	
+	

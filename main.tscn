@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://dxpm20igoillm"]
+[gd_scene load_steps=16 format=3 uid="uid://dxpm20igoillm"]
 
 [ext_resource type="PackedScene" uid="uid://bgh42503avk7q" path="res://kitchen.tscn" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://dn2bwf5drxhim" path="res://main.gd" id="1_lquwl"]
@@ -13,46 +13,33 @@
 [sub_resource type="Resource" id="Resource_efxa6"]
 script = ExtResource("9_4c57u")
 nutrition = 2.0
-energy = null
-stimulation = null
-social = null
-vice_satisfaction = null
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
 
 [sub_resource type="Resource" id="Resource_dg77c"]
 script = ExtResource("9_4c57u")
 nutrition = 2.0
-energy = null
-stimulation = null
-social = null
-vice_satisfaction = null
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
 
 [sub_resource type="Resource" id="Resource_ycdy4"]
 script = ExtResource("9_4c57u")
 nutrition = 2.0
-energy = null
-stimulation = null
-social = null
-vice_satisfaction = null
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
 
 [sub_resource type="Resource" id="Resource_w48qg"]
 script = ExtResource("9_4c57u")
 nutrition = -2.0
-energy = null
-stimulation = null
-social = null
-vice_satisfaction = null
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
 
 [sub_resource type="Resource" id="Resource_vivmo"]
 script = ExtResource("9_4c57u")
 nutrition = -1.0
-energy = null
-stimulation = null
-social = null
-vice_satisfaction = null
+metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
+
+[sub_resource type="Resource" id="Resource_kek77"]
+script = ExtResource("9_4c57u")
+nutrition = 5.0
+energy = -1.0
+social = -1.0
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
 
 [node name="Main" type="Node2D"]
@@ -62,7 +49,7 @@ script = ExtResource("1_lquwl")
 visible = false
 position = Vector2(449, 225)
 
-[node name="JobManager" type="Node" parent="."]
+[node name="JobManager" type="Node2D" parent="."]
 script = ExtResource("4_1bvp3")
 
 [node name="RatManager" type="Node2D" parent="."]
@@ -85,6 +72,7 @@ position = Vector2(568, 269)
 script = ExtResource("8_kek77")
 _job = 0
 _personality_modifiers = SubResource("Resource_efxa6")
+_title = "Stove 1"
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
 [node name="LineCook" type="Marker2D" parent="LocationManager"]
@@ -92,6 +80,7 @@ position = Vector2(920, 441)
 script = ExtResource("8_kek77")
 _job = 1
 _personality_modifiers = SubResource("Resource_dg77c")
+_title = "Stove 2"
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
 [node name="PrepCook" type="Marker2D" parent="LocationManager"]
@@ -99,6 +88,7 @@ position = Vector2(324, 273)
 script = ExtResource("8_kek77")
 _job = 2
 _personality_modifiers = SubResource("Resource_ycdy4")
+_title = "Prep table"
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
 [node name="Dishwasher" type="Marker2D" parent="LocationManager"]
@@ -106,6 +96,7 @@ position = Vector2(803, 273)
 script = ExtResource("8_kek77")
 _job = 3
 _personality_modifiers = SubResource("Resource_w48qg")
+_title = "Sink"
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
 [node name="Bartender" type="Marker2D" parent="LocationManager"]
@@ -113,4 +104,12 @@ position = Vector2(382, 442)
 script = ExtResource("8_kek77")
 _job = 4
 _personality_modifiers = SubResource("Resource_vivmo")
+_title = "Bar"
+metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
+
+[node name="Pantry" type="Marker2D" parent="LocationManager"]
+position = Vector2(1036, 277)
+script = ExtResource("8_kek77")
+_personality_modifiers = SubResource("Resource_kek77")
+_title = "Pantry"
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"

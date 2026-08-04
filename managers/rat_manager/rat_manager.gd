@@ -1,5 +1,7 @@
 extends Node2D
 
+class_name RatManager
+
 var rat_scene = preload("res://entities/rat/rat.tscn")
 
 signal rat_clicked(rat: Rat)
@@ -7,7 +9,8 @@ signal rat_clicked(rat: Rat)
 var next_rat_id: int = 1
 var selected_rat: Rat
 
-@onready var _location_manager = get_parent().get_node("LocationManager")
+@onready var _location_manager: LocationManager = get_parent().get_node("LocationManager")
+@onready var _job_manager: JobManager = get_parent().get_node("JobManager")
 
 func generate_rat() -> void:
 	var rat: Rat = rat_scene.instantiate()
@@ -24,4 +27,5 @@ func generate_rat() -> void:
 
 func trigger_rat_reevaluation(rat: Rat):
 	var locations: Array[Location]= _location_manager.get_location_data()
-	rat.reevaluate_needs(locations)
+	var job := _job_manager.get_assigned_job(rat)
+	rat.reevaluate_needs(job, locations)
