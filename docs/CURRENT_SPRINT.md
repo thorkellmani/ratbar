@@ -1,36 +1,48 @@
-# Current Sprint — Minimal Watchable Loop
+# Current Sprint — Game Time
 
-Goal: get something on screen worth watching, and lay the first real slice of the actual action-selection algorithm (`RAT_SIMULATION.md` → Decision-Making → Action Selection), rather than a throwaway placeholder. Scoped down hard: one need, one location type (`employment_pressure` only), no scoring competition between multiple options yet.
+Goal: replace Sprint 1's ad hoc per-rat `Timer` with real simulation-time infrastructure — a centralized game clock, staggered per-rat decision scheduling, and a new mechanism that actually applies a location's effect to a rat's needs over time (nothing in the codebase does this yet — `NeedsEvaluator` only picks a destination, it never touches `rat.mood`). See `docs/sprints/01-minimal-watchable-loop.md` for how this sprint's scope was arrived at.
 
-This sprint is a deliberate simplification of the full backlog (sections 2/5/6) and the full action-selection flow (10 steps in the design doc) — only step 1 (broadcast, reduced to a constant `employment_pressure`) and step 8 (urgency × tag value) are being built. Personality modifiers, adjacency, crisis-state suppression, repetition penalty, and variance all come later.
+Explicitly out of scope this sprint: the location "quality" tag-value scale, the new Location Quality resource, and any rename of `Location._personality_modifiers`. This sprint keeps reading the existing `nutrition` field as-is — only *when* and *how often* it gets applied to the rat is changing, not the values themselves.
 
-## Phase 1 (this sprint) — nutrition only
+## Design decisions locked this sprint
 
-- **Need considered:** `nutrition` only. The full formula sums `need_urgency[n] × tag_value[n]` across all five needs — this sprint only builds the single-need case, since there's nothing to sum yet.
-- **Location considered:** `employment_pressure` only, as a placeholder constant (no real location-broadcast system yet — that's backlog 5.1). No idle/vice/social tags competing against it yet, so there's no genuine multi-way scoring happening yet either — just gating a single value.
-- **Urgency via `Curve` resource**, not a hardcoded threshold: one `Curve` for nutrition, shaped to match the design doc's description ("flat above +30, slow rise through neutral, steep exponential drop below -40"). Domain/range set to `-100..100` via `min_domain`/`max_domain`/`min_value`/`max_value` (need to verify these are actually editable in the Inspector in this Godot version, not just settable via code — check before committing to hand-tuning it visually).
-- **Job station placement:** at least one location node in a test scene, positioned wherever the rat's `assigned_job` should send it.
-- **Idle behavior:** rat stays wherever it currently is; `job_state` set to `IDLE`. No separate rest/idle spot yet.
-- **Check cadence:** re-evaluate on a fixed interval via a `Timer`, not every `_process()` frame.
+- **Game-time convention:** 1 game-hour = 60 real seconds at 1x `Engine.time_scale`. A 16-hour shift plays out in 16 real minutes.
+- **Two systems, fully decoupled:**
+  - **Decision-making** (`Rat.reevaluate_needs`) — the existing scoring/comparison that picks *where* a rat should go. Runs on a staggered per-rat schedule: each rat gets a fixed slot at generation (e.g. `rat.id % NUM_SLOTS`), and only re-evaluates when the clock's current tick matches its slot. This replaces `Rat`'s own `DecisionPeriod` Timer, whose only real job was avoiding N rats all re-evaluating in the same frame.
+  - **Need application** — a new step that actually changes a rat's stat over time (e.g. `mood.nutrition` ticking upward while stood at the Pantry). Runs every tick, for every rat, unconditionally — except while a rat is mid-travel (`state == PROCEEDING_TO_LOCATION`), when nothing is applied at all, since the rat isn't at any location yet.
+- **`RatManager` is the sole listener of the new `GameClock` tick signal**, and is the only thing that calls into individual rats (`reevaluate_needs` for rats in the current slot, a new per-tick stat-update call for everyone). Rats do not each subscribe to the clock independently — that would mean N live signal connections and the slot-matching logic duplicated across every rat instance instead of living in one place. This matches the existing manager-owns-iteration pattern already used by `JobManager` and `LocationManager`.
+- **`Rat` owns both `current_location` and `destination`.** `_destination` already meant `Rat` held direct references to `Location` objects for movement — so tracking `current_location` there too doesn't cross a new encapsulation boundary, it just extends the existing one. `current_location` persists after arrival instead of being cleared, and updates whenever a new destination is chosen.
+- **Deferred, explicitly not this sprint:** the -5..+5 location quality scale, the new Location Quality resource, and moving `Location._job` into `JobManager`. All flagged for future sprints.
 
-### Tasks
+## Tasks
 
-- [x] Build the nutrition `Curve` resource, matching the doc's described shape; confirm domain/range editability in the Inspector
-- [x] Build a minimal test scene: one job-station location node (fixed position), one rat with an `assigned_job` set
-- [x] Add a decision check (on a `Timer`) that samples the nutrition curve and combines it with the `employment_pressure` constant to decide work-vs-idle
-- [x] Move the rat (teleport, existing placeholder) to the job station when the check resolves to "work"; set `job_state = WORKING` / `IDLE` accordingly
-- [x] Some visible indicator of current `job_state` — the whole point is watchability
+### `GameClock`
+- [ ] Create `GameClock` (decide: new autoload, or a node under `Main`) with a fixed real-time tick interval
+- [ ] Decide the tick interval and derive `ticks_per_hour = 60.0 / tick_interval_seconds` from the game-time convention above
+- [ ] Emits a single `tick(tick_count: int)` signal
 
-### Test scenarios
+### `RatManager` as central driver
+- [ ] `RatManager` connects to `GameClock.tick` once (not per-rat)
+- [ ] `RatManager` assigns each rat a slot at generation time (`rat.id % NUM_SLOTS`) — decide `NUM_SLOTS`
+- [ ] On each tick: for rats whose slot matches `tick_count % NUM_SLOTS`, call `rat.reevaluate_needs(...)` (existing method, unchanged)
+- [ ] On each tick: for every rat unconditionally, call a new per-tick stat-update method (e.g. `rat.apply_stat_tick()`) — no-ops internally while `state == PROCEEDING_TO_LOCATION`
+- [ ] Remove `Rat`'s `DecisionPeriod` Timer node and `_on_decision_period_timeout()`
 
-Use the debug panel's stat override (section 0.2) to drive these — no need for real decay yet.
+### `Rat` location tracking
+- [ ] Add `current_location: Location`, set whenever a new `destination` is chosen and left set after arrival (don't clear it in `_arrive_at_destination()` the way `destination` itself gets cleared)
 
-1. **Baseline works:** default nutrition (0), `assigned_job` set, job station in scene → rat moves to the job station, `job_state` becomes `WORKING`.
-2. **Deep hunger blocks work:** set `nutrition` well below `-40` (the curve's steep zone) → rat does not move; `job_state` becomes/stays `IDLE`.
-3. **Recovery re-enables work:** from scenario 2, raise `nutrition` back above the curve's steep zone → rat transitions `IDLE → WORKING` on the next check.
-4. **No job, no work:** fine nutrition but `assigned_job = UNASSIGNED` → rat stays `IDLE`, confirming idling isn't purely hunger-driven.
-5. **Curve shape sanity check:** sample the curve directly at a few points (e.g. `+50`, `0`, `-20`, `-40`, `-70`) and print the results — confirm it's actually flat above `+30` and steep below `-40`, not just monotonically decreasing.
+### Need application
+- [ ] `Rat.apply_stat_tick()`: if stationary (`state` is `WORKING`/`IDLE`) and `current_location` is set, add `current_location._personality_modifiers.nutrition / ticks_per_hour` to `mood.nutrition` this tick
+- [ ] If `state == PROCEEDING_TO_LOCATION`, apply nothing this tick
 
-## Phase 2 (next, not this sprint) — remaining needs
+## Test scenarios
 
-Once nutrition's slice is working end-to-end: add `Curve` resources for `energy`, `stimulation`, `social`, `vice_satisfaction`, each shaped per the doc's per-need description. At that point the formula becomes a genuine sum across needs, not a single value — worth re-deriving the combination logic then rather than guessing ahead now.
+1. **Slot distribution:** Generate N rats. Confirm each is assigned a slot in `0..NUM_SLOTS-1` at generation, and that `reevaluate_needs` only fires for a given rat on ticks matching its slot (log to confirm).
+2. **Continuous nutrition tick:** Place a rat at the Pantry, stationary. Over several ticks, confirm `mood.nutrition` increases every tick regardless of whether that tick happens to be the rat's decision slot.
+3. **No nutrition while traveling:** Force a rat into `PROCEEDING_TO_LOCATION`. Confirm `mood.nutrition` doesn't change on any tick while traveling, even on the rat's own decision slot.
+4. **Timer removal sanity check:** Confirm `Rat` no longer has a `DecisionPeriod` Timer child, and nothing still depends on `RatConstants.DECISION_PERIOD` for per-rat scheduling (it may be repurposed as `GameClock`'s own interval, or removed).
+5. **Time-scale interaction:** Set `Engine.time_scale` to 10x via the existing debug button. Confirm `GameClock` ticks proportionally faster and nutrition climbs at the same *game-time* rate — just compressed into less real time, not a different rate entirely.
+
+## Next sprint (not this one) — location quality scale
+
+Codify the -5..+5 quality scale discussed alongside this sprint, build the dedicated Location Quality resource (replacing the borrowed `Mood` type on `Location`), and re-point the six locations to it. Then extend the tick/need-application system built this sprint to `energy`, `stimulation`, `social`, `vice_satisfaction`, making the score a genuine `sum(need_urgency[n] × quality[n])` across all five needs.

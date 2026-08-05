@@ -8,6 +8,21 @@ The model is inspired by The Sims: locations and actions advertise their potenti
 
 ---
 
+## Simulation Time
+
+The simulation runs on its own clock, not on Godot's per-frame `_process()` and not on any individual rat's own timer.
+
+**Convention:** 1 game-hour = 60 real seconds at 1x `Engine.time_scale`. A 16-hour shift plays out in 16 real minutes. Debug time-scale controls (0.5x/1x/2x/5x/10x) scale this uniformly — a shift always takes the same number of *game*-hours, just compressed or stretched in real time.
+
+A single `GameClock` emits a tick at a fixed real-time interval; `ticks_per_hour` is derived from that interval and the convention above. Two independent systems consume this clock, and they are deliberately not the same cadence:
+
+- **Decision-making** — a rat deciding where to go next. This doesn't need to happen every tick for every rat; each rat is assigned a fixed slot at generation and only re-evaluates on ticks matching its slot, so a colony's decisions are spread out rather than all recomputed on the same tick.
+- **Need application** — a location's effect actually being applied to a rat's needs (e.g. nutrition rising while stood at the Pantry). This runs every tick, for every rat that's currently stationary at a location, regardless of that rat's decision slot. A rat mid-travel between locations gets no need application at all until it arrives.
+
+Only one thing listens to `GameClock` directly — `RatManager` — which then calls into individual rats itself, rather than every rat subscribing to the clock independently. This keeps the "who runs when" scheduling logic in one place instead of duplicated across the whole colony.
+
+---
+
 ## Physical Space
 
 ### Kitchen
@@ -74,8 +89,8 @@ Continuous stats, -100 to 100. 0 = neutral. Negative = deprived. Positive = sati
 | `radicalization` | 0 to 100 | Hidden. Raised by organizer broadcasts. Drives rebellion susceptibility. |
 | `extra_stress` | 0 to 100 | Hidden. Accumulates in burnout when forced to work. Maxing out kills the rat. |
 | `currency` | 0 to inf | Gains and losses through gambling. Economy TBD. |
-| `crisis_state` | UNAFFECTED / BURNOUT / REBELLION | Set by breaking point roll. |
-| `job_state` | IDLE / PROCEEDING_TO_WORK / WORKING / PROCEEDING_TO_VICE / VICING | Current activity state. |
+| `crisis` | UNAFFECTED / BURNOUT / REBELLION | Set by breaking point roll. |
+| `state` | IDLE / PROCEEDING_TO_WORK / WORKING / PROCEEDING_TO_VICE / VICING | Current activity state. |
 
 ### Per-Rat Collections
 
@@ -91,7 +106,7 @@ Continuous stats, -100 to 100. 0 = neutral. Negative = deprived. Positive = sati
 
 ### Need Decay & Fulfillment
 
-Timing is not fixed — fulfillment happens when the need value demands it, not on a clock. Baseline amounts assume a rat that is doing okay; unmet needs and stress shift the rates.
+Fulfillment is applied every `GameClock` tick a rat spends stationary at a location (see Simulation Time), not gated by the rat's own decision cadence — a rat parked at the Pantry gains nutrition continuously, whether or not this tick happens to be one where it's reconsidering where to go. Baseline amounts assume a rat that is doing okay; unmet needs and stress shift the rates.
 
 `socialness` controls how fast `social` decays and how much positive effect the rat has on others during interaction. A low-socialness rat needs interaction less and contributes less to others' fulfillment. A high-socialness rat is miserable without constant interaction and boosts others significantly.
 
@@ -167,13 +182,13 @@ Stress decreases from:
 
 #### Breaking Point
 
-When stress reaches 100, roll for a crisis state. Personality and owner relationship weight the outcome:
+When stress reaches 100, roll for a crisis. Personality and owner relationship weight the outcome:
 - High `temper` + low `owner_relationship` skews toward **rebellion**
 - Prolonged overwork and unmet needs skews toward **burnout**
 
-More crisis states may be added later. The roll mechanic leaves room for expansion.
+More crisis may be added later. The roll mechanic leaves room for expansion.
 
-### Crisis States
+### Crisis ##
 
 Discrete conditions a rat can fall into when stress hits 100 and the breaking point roll triggers. Entry is probabilistic — personality stats and owner relationship weight the outcome.
 
@@ -194,7 +209,7 @@ Discrete conditions a rat can fall into when stress hits 100 and the breaking po
 - **Escalation:** As radicalization spreads, environmental tells increase. Early signs are subtle. Later signs are unmistakable. If the owner doesn't intervene the rebellion can become colony-wide.
 - **Recovery:** Owner must intervene — isolate or remove the organizer. Removal is the union-busting move but does not undo radicalization already spread. If colony conditions remain bad, another rat may pick up the organizing role.
 
-The owner's tools against crisis states are the same as always: job assignment, proximity control, vice and food provision. They are blunt and have side effects.
+The owner's tools against crisis are the same as always: job assignment, proximity control, vice and food provision. They are blunt and have side effects.
 
 ### Owner Relationship
 
@@ -218,7 +233,7 @@ Derived bottom-up as a simple average of all individual scores. The colony score
 
 ### Action Selection
 
-Each tick, a rat evaluates all reachable locations and rat broadcasts and picks the highest scoring one. There is no return-to-post default — after every completed action the rat re-evaluates from scratch. `employment_pressure` on the job location is always competing, pulling the rat back to work passively.
+On its assigned decision tick (see Simulation Time — not every game tick, just the one slot each rat is assigned), a rat evaluates all reachable locations and rat broadcasts and picks the highest scoring one. There is no return-to-post default — after every completed action the rat re-evaluates from scratch. `employment_pressure` on the job location is always competing, pulling the rat back to work passively.
 
 #### Flow
 
@@ -240,7 +255,7 @@ Evaluate who is currently at this location:
 - Inebriated adjacent rats degrade the location score and pod performance
 - Scales with evaluating rat's `socialness`
 
-**4. Crisis state modifier**
+**4. Crisis modifier**
 If rat is in burnout: suppress all tags except rest and vice.
 
 **5. Rat broadcasts**

@@ -6,15 +6,10 @@ static func evaluate(rat: Rat, assigned_job: JobConstants.JOB, locations: Array[
 	print("Evaluating needs for ", rat._title, " with job ", JobConstants.JOB.find_key(assigned_job))
 	var best_score: float = -INF
 	var best_location: Location
-
-	print("Rat ", rat._title, " with job ", JobConstants.JOB.find_key(assigned_job), " has mood ", rat.mood)
-
 	for location in locations:
 		var employment_pressure : float = JobConstants.EMPLOYMENT_PRESSURE if assigned_job == location._job else 0.0
 
 		var score: float = (URGENCIES.mood_urgencies.nutrition.sample(rat.mood.nutrition) * location._personality_modifiers.nutrition) + employment_pressure
-
-		print("Location ", location._title, " has score ", score, " with location stats ", location._personality_modifiers, " and employment pressure ", employment_pressure)
 		if score > best_score:
 			best_score = score
 			best_location = location

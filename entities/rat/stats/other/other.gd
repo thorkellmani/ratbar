@@ -10,14 +10,14 @@ class_name Other extends BaseStatGroup
 		currency = value
 		stat_changed.emit()
 
-@export var crisis_state: RatConstants.CRISIS_STATE = RatConstants.CRISIS_STATE.UNAFFECTED:
+@export var crisis: RatConstants.CRISIS = RatConstants.CRISIS.UNAFFECTED:
 	set(value):
-		crisis_state = value
+		crisis = value
 		stat_changed.emit()
 
-@export var job_state: RatConstants.JOB_STATE = RatConstants.JOB_STATE.IDLE:
+@export var state: RatConstants.STATE = RatConstants.STATE.IDLE:
 	set(value):
-		job_state = value
+		state = value
 		stat_changed.emit()
 
 @export var assigned_job: JobConstants.JOB = JobConstants.JOB.UNASSIGNED:
@@ -29,7 +29,7 @@ func get_keys() -> Array[String]:
 	return [
 		"owner_relationship",
 		"currency",
-		"crisis_state",
-		"job_state",
+		"crisis",
+		"state",
 		"assigned_job",
 	]
