@@ -5,7 +5,7 @@
 
 [sub_resource type="Curve" id="Curve_io38m"]
 _limits = [0.0, 1.0, -100.0, 100.0]
-_data = [Vector2(-100, 1), 0.0, 0.0, 0, 0, Vector2(-43.66925, 0.18750006), -0.0051241657, -0.0051241657, 0, 0, Vector2(100, 0.011), 0.0, 0.0, 0, 0]
+_data = [Vector2(-100, 1), 0.0, 0.0, 0, 0, Vector2(-40, 0.188), -0.0051241657, -0.0051241657, 0, 0, Vector2(100, 0.011), 0.0, 0.0, 0, 0]
 point_count = 3
 
 [sub_resource type="Resource" id="Resource_8sjpd"]

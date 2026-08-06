@@ -98,6 +98,7 @@ func _initialize() -> void:
 	assign_job_panel_group.title = "Assign Jobs"
 	$Scroller/Panel.add_child(assign_job_panel_group)
 	assign_job_panel_group.add_child(job_vbox)
+	assign_job_panel_group.folded = true
 	for job in assign_job_group:
 		job_vbox.add_child(generate_button(job, func(): assign_job_requested.emit(_rat, assign_job_group[job])))
 
@@ -105,6 +106,9 @@ func _initialize() -> void:
 	for action in actions:
 		$Scroller/Panel.add_child(generate_button(actions[action].label, func(): actions[action].signal.emit()))
 	$Scroller/Panel.add_child(TimeButton.new())
+	$Scroller/Panel.add_child(PauseButton.new())
+
+
 
 func _update() -> void:
 	for child in $Scroller/Panel.get_children():

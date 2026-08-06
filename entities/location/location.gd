@@ -1,10 +1,10 @@
 class_name Location extends Marker2D
 
-@export var _job: JobConstants.JOB = JobConstants.JOB.UNASSIGNED
-@export var _personality_modifiers: Mood = Mood.new()
-@export var _title: String = ""
+@export var job: JobConstants.JOB = JobConstants.JOB.UNASSIGNED
+@export var modifiers: Mood = Mood.new()
+@export var title: String = ""
 
-func initialize(job: JobConstants.JOB, personality_modifiers: Mood, title: String) -> void:
-	self._job = job
-	self._personality_modifiers = personality_modifiers
-	self._title = title
+func initialize(_job: JobConstants.JOB, _modifiers: Mood, _title: String) -> void:
+	self.job = _job
+	self.modifiers = _modifiers
+	self.title = _title

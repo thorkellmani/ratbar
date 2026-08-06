@@ -3,7 +3,6 @@ extends Area2D
 class_name Rat
 
 signal rat_clicked(rat: Rat)
-signal need_reevaluation(rat: Rat)
 
 const DEFAULT_VALUES := preload("res://entities/rat/generation_defaults/generation_defaults.tres")
 
@@ -19,6 +18,7 @@ var _job_skills: JobSkills
 var _camaraderie: Camaraderie
 var _other: Other
 
+var _current_location: Location
 var _destination: Location
 
 #TODO LATER
@@ -83,15 +83,18 @@ func initialize(
 	_camaraderie = Camaraderie.new()
 	_other = Other.new()
 
-	$DecisionPeriod.wait_time = RatConstants.DECISION_PERIOD
+func apply_location_modifiers() -> void:
+	if _current_location == null:
+		return
+
+	var modifiers: Mood = _current_location.modifiers
+	#modifiers are given in hour granularity, normalize by GAME_TICKS_PER_IN_GAME_HOUR for correct numbers per tick
+	_mood.nutrition += modifiers.nutrition / GameConstants.GAME_TICKS_PER_IN_GAME_HOUR
 
 
 func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		rat_clicked.emit(self)
-
-func _on_decision_period_timeout() -> void:
-	need_reevaluation.emit(self)
 
 func reevaluate_needs(job: JobConstants.JOB, locations: Array[Location]) -> void:
 	var intended_location: Location = NeedsEvaluator.evaluate(self, job, locations)
@@ -99,9 +102,10 @@ func reevaluate_needs(job: JobConstants.JOB, locations: Array[Location]) -> void
 	other.state = RatConstants.STATE.PROCEEDING_TO_LOCATION
 
 func _arrive_at_destination() -> void:
-	if _destination._job != JobConstants.JOB.UNASSIGNED:
+	if _destination.job != JobConstants.JOB.UNASSIGNED:
 		other.state = RatConstants.STATE.WORKING
 	else:
 		other.state = RatConstants.STATE.IDLE
 
+	_current_location = _destination
 	_destination = null
