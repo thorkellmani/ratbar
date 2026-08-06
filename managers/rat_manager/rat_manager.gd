@@ -22,7 +22,6 @@ func _ready() -> void:
 
 func generate_rat() -> void:
 	var rat: Rat = rat_scene.instantiate()
-
 	rat.initialize(next_rat_id)
 
 	next_rat_id += 1
@@ -44,7 +43,6 @@ func _on_game_clock_tick(tick_count: int) -> void:
 	for rat: Rat in Colony.colony.values():
 		rat.apply_location_modifiers()
 		_check_rat_reevaluation(tick_count, rat)
-
 
 func _check_rat_reevaluation(tick_count: int, rat: Rat) -> void:
 	var slotted_rats: Array[Rat] = _rat_tick_slot_registry[tick_count % GameConstants.GAME_TICK_SLOTS].rats

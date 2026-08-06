@@ -3,6 +3,11 @@
 Each task is broken into atomic parts. Each part has a verification test.
 Godot has no automated test runner — verification is done by running the scene and observing the described outcome.
 
+## References
+
+- **Dave Mark, *Behavioral Mathematics for Game AI*** — the utility-AI framework `NeedsEvaluator` is built on: considerations (independently-scored factors, e.g. need urgency) run through response curves (shaping how a raw input like a mood stat maps to a normalized score), then combined into a single decision score. The core rule this design leans on repeatedly: every consideration must be normalized to a common scale *before* being combined, or one axis's raw units will dominate/get drowned out regardless of its actual relative importance. Dave Mark's later "Infinite Axis Utility System" talks extend this to independently-normalized axes multiplied together — the model behind splitting `Location.modifiers` (physical per-hour rate) from the planned `Location.pull` (normalized decision-scoring signal); see section 6.1.
+- **"Smart object advertising" (The Sims)** — the broader pattern `NeedsEvaluator`/`Location` already implement: objects/locations broadcast ("advertise") how well they satisfy each need, and an agent scans available ads and picks based on its own current urgencies, rather than the decision logic hardcoding which location to prefer.
+
 ## 0. Debug Suite
 
 ### 0.1 Rat inspector overlay
@@ -102,37 +107,37 @@ Godot has no automated test runner — verification is done by running the scene
 Establishes the simulation's own clock, independent of Godot's per-frame `_process()` and independent of any individual rat's own timing. Everything downstream (need decay, stress accumulation, action selection cadence) is denominated against this, not against wall-clock time directly. See `docs/CURRENT_SPRINT.md` for the sprint this was designed and built in.
 
 ### 2.1 Game-time convention
-- [ ] Adopt and document: 1 game-hour = 60 real seconds at 1x `Engine.time_scale`
+- [x] Adopt and document: 1 game-hour = 60 real seconds at 1x `Engine.time_scale`. `SECONDS_PER_GAME_TICK = 1.0`, `GAME_TICKS_PER_IN_GAME_HOUR = 60`.
 
-**Test:** With `Engine.time_scale = 1.0`, confirm a 16-game-hour shift takes 16 real minutes to elapse, measured against `GameClock`'s own tick count, not a stopwatch.
+**Test:** With `Engine.time_scale = 1.0`, confirm a 16-game-hour shift takes 16 real minutes to elapse, measured against `GameClock`'s own tick count, not a stopwatch. ✅ Confirmed, including 10x `time_scale` scaling proportionally.
 
 ### 2.2 `GameClock`
-- [ ] New clock (autoload or a node under `Main` — decide during implementation) with a fixed real-time tick interval
-- [ ] Derive `ticks_per_hour = 60.0 / tick_interval_seconds` from 2.1's convention
-- [ ] Emits a single `tick(tick_count: int)` signal
+- [x] New `Node` under `Main` (not an autoload — it's stateful runtime behavior, not shared static data) with a `Timer` child, `wait_time = SECONDS_PER_GAME_TICK`
+- [x] `GAME_TICKS_PER_IN_GAME_HOUR = 60` derived from 2.1's convention
+- [x] Emits a single `tick(tick_count: int)` signal
 
-**Test:** Subscribe a temporary print statement to `tick`. Confirm it fires at the expected real-time interval, and that `tick_count` increments by exactly 1 each time (no skipped or duplicate ticks).
+**Test:** Subscribe a temporary print statement to `tick`. Confirm it fires at the expected real-time interval, and that `tick_count` increments by exactly 1 each time (no skipped or duplicate ticks). ✅ Confirmed.
 
 ### 2.3 Centralized dispatch (no per-rat timers)
-- [ ] `RatManager` is the only listener of `GameClock.tick` — individual rats do not each subscribe to the clock
-- [ ] Each rat is assigned a fixed slot at generation (e.g. `rat.id % NUM_SLOTS`)
-- [ ] On each tick, `RatManager` calls `rat.reevaluate_needs(...)` only for rats whose slot matches `tick_count % NUM_SLOTS`
-- [ ] Remove `Rat`'s own `DecisionPeriod` Timer and `_on_decision_period_timeout()` entirely
+- [x] `RatManager` is the only listener of `GameClock.tick` — individual rats do not each subscribe to the clock
+- [x] Each rat is assigned a slot at generation — weighted-random across 15 slots (`pick_weighted_random`, biased toward less-occupied slots), not deterministic `rat.id % NUM_SLOTS`, to avoid id-ordered clumping. 15 slots ÷ 60 ticks/hour = 4 decisions/hour/rat.
+- [x] On each tick, `RatManager` calls `rat.reevaluate_needs(...)` only for rats whose slot matches `tick_count % 15`
+- [x] Remove `Rat`'s own `DecisionPeriod` Timer and `_on_decision_period_timeout()` entirely
 
-**Test:** Generate N rats. Log which rat IDs get `reevaluate_needs` called on each tick over several ticks — confirm each rat's calls land only on ticks matching its assigned slot, and that removing the old Timer didn't leave decision-making dead (rats still eventually re-evaluate).
+**Test:** Generate N rats. Log which rat IDs get `reevaluate_needs` called on each tick over several ticks — confirm each rat's calls land only on ticks matching its assigned slot, and that removing the old Timer didn't leave decision-making dead (rats still eventually re-evaluate). ✅ Confirmed with multiple rats (distinguished via random `modulate` color), staggered rather than lockstep.
 
 ### 2.4 Need application, decoupled from decision cadence
-- [ ] On every tick, for every rat unconditionally, `RatManager` calls a new per-tick stat-update method (e.g. `rat.apply_stat_tick()`)
-- [ ] While `state == PROCEEDING_TO_LOCATION` (mid-travel), the update applies nothing
-- [ ] While stationary (`state` is `WORKING`/`IDLE`) and `current_location` is set, apply `current_location._personality_modifiers.nutrition / ticks_per_hour` to `mood.nutrition`
+- [x] On every tick, for every rat unconditionally, `RatManager` calls `rat.apply_stat_tick()`
+- [x] While `state == PROCEEDING_TO_LOCATION` (mid-travel), the update applies nothing
+- [x] While stationary (`state` is `WORKING`/`IDLE`) and `current_location` is set, apply `current_location.modifiers.nutrition / GAME_TICKS_PER_IN_GAME_HOUR` to `mood.nutrition`
 
-**Test:** Place a rat at the Pantry, stationary. Confirm `mood.nutrition` increases every tick, not just on the rat's own decision slot. Force the rat into `PROCEEDING_TO_LOCATION` — confirm nutrition stops changing until it arrives and goes stationary again.
+**Test:** Place a rat at the Pantry, stationary. Confirm `mood.nutrition` increases every tick, not just on the rat's own decision slot. Force the rat into `PROCEEDING_TO_LOCATION` — confirm nutrition stops changing until it arrives and goes stationary again. ✅ Confirmed, both halves.
 
 ### 2.5 `Rat` location tracking
-- [ ] Add `current_location: Location` to `Rat`, set whenever a new `destination` is chosen
-- [ ] Unlike `destination` (cleared on arrival), `current_location` persists after arrival — it's what 2.4's need application reads
+- [x] Add `current_location: Location` to `Rat`, set whenever a new `destination` is chosen
+- [x] Unlike `destination` (cleared on arrival), `current_location` persists after arrival — it's what 2.4's need application reads
 
-**Test:** Move a rat to a destination and let it arrive. Confirm `destination` is cleared but `current_location` still points at the location the rat is standing at.
+**Test:** Move a rat to a destination and let it arrive. Confirm `destination` is cleared but `current_location` still points at the location the rat is standing at. ✅ Confirmed.
 
 ---
 
@@ -144,7 +149,7 @@ Establishes the simulation's own clock, independent of Godot's per-frame `_proce
 **Test:** Run the simulation for one in-game shift with a rat doing nothing. Confirm `nutrition` drops from 0 to below -40 by end of shift.
 
 ### 3.1b Per-job nutrition modifier
-- [x] Covered by 2.4 — every `Location` (job stations and Pantry alike) already carries its own `_personality_modifiers.nutrition`, applied every tick a stationary rat spends there via `ticks_per_hour`. The modifier lives on the `Location`, not on the job type or the rat — a job's nutrition effect is just whatever value its station's `Location` node carries, same as any other location.
+- [x] Covered by 2.4 — every `Location` (job stations and Pantry alike) already carries its own `modifiers.nutrition` (a per-hour rate), applied every tick a stationary rat spends there via `GAME_TICKS_PER_IN_GAME_HOUR`. The modifier lives on the `Location`, not on the job type or the rat — a job's nutrition effect is just whatever value its station's `Location` node carries, same as any other location. Current values: Pantry `200`, cook stations `20`, Dishwasher `-10`, Bartender `0`. Note: this same field is currently also read by `NeedsEvaluator` for decision-scoring — see the new Location Pull section for why that's slated to change.
 
 **Test:** Run a HEAD_COOK and a DISHWASHER for the same duration with identical starting nutrition (and 3.1's baseline decay active). HEAD_COOK nutrition should decay slower (its Location's positive modifier partially offsets baseline decay); DISHWASHER's negative modifier should make it decay faster than baseline.
 
@@ -255,6 +260,7 @@ Establishes the simulation's own clock, independent of Godot's per-frame `_proce
 ## 6. Action Selection
 
 ### 6.1 Location broadcasts
+Note: the "tag values" this section describes are `Location.pull` (a hand-authored, normalized `-5..+5` value per need — see the Location Pull sprint), not `Location.modifiers` (the physical per-hour rate consumed by `apply_stat_tick`, section 2.4/3.1b). The two were conflated into one field through the Game Time sprint; splitting them is this section's next step. See References above (Dave Mark) for why a shared normalized scale matters here.
 - [ ] Each location node emits a tag dictionary:
   - [ ] `nutrition`
   - [ ] `energy`

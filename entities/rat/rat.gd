@@ -68,6 +68,8 @@ func initialize(
 	#could be optimized if needed
 	id = idx
 	_title = "Rat " + str(id)
+	$Label.text = _title
+	$ColorRect.modulate = Color.from_hsv(randf(), 0.8, 0.9)
 
 	_personality = Personality.new()
 	_personality.greed = _randomize_personality_trait("greed")
