@@ -9,7 +9,7 @@ static func evaluate(rat: Rat, assigned_job: JobConstants.JOB, locations: Array[
 	for location in locations:
 		var employment_pressure : float = JobConstants.EMPLOYMENT_PRESSURE if assigned_job == location.job else 0.0
 
-		var score: float = (URGENCIES.mood_urgencies.nutrition.sample(rat.mood.nutrition) * location.modifiers.nutrition) + employment_pressure
+		var score: float = (URGENCIES.mood_urgencies.nutrition.sample(rat.mood.nutrition) * location.pull.nutrition) + employment_pressure
 		if score > best_score:
 			best_score = score
 			best_location = location

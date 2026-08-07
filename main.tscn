@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://dxpm20igoillm"]
+[gd_scene load_steps=24 format=3 uid="uid://dxpm20igoillm"]
 
 [ext_resource type="PackedScene" uid="uid://bgh42503avk7q" path="res://kitchen.tscn" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://dn2bwf5drxhim" path="res://main.gd" id="1_lquwl"]
@@ -10,35 +10,65 @@
 [ext_resource type="Script" uid="uid://c6cwtu6kw7u3d" path="res://entities/location/location.gd" id="8_kek77"]
 [ext_resource type="Script" uid="uid://c6qin4lc6t6ov" path="res://entities/rat/stats/mood/mood.gd" id="9_4c57u"]
 [ext_resource type="Script" uid="uid://bmokapa5tkgtl" path="res://config/game_clock.gd" id="10_4c57u"]
+[ext_resource type="Script" uid="uid://d1dgj1rs2fdji" path="res://entities/location/location_pull.gd" id="10_efxa6"]
 
 [sub_resource type="Resource" id="Resource_efxa6"]
 script = ExtResource("9_4c57u")
 nutrition = 20.0
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
 
+[sub_resource type="Resource" id="Resource_2cqfq"]
+script = ExtResource("10_efxa6")
+nutrition = 1.0
+metadata/_custom_type_script = "uid://d1dgj1rs2fdji"
+
 [sub_resource type="Resource" id="Resource_dg77c"]
 script = ExtResource("9_4c57u")
 nutrition = 20.0
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
+
+[sub_resource type="Resource" id="Resource_yaehf"]
+script = ExtResource("10_efxa6")
+nutrition = 1.0
+metadata/_custom_type_script = "uid://d1dgj1rs2fdji"
 
 [sub_resource type="Resource" id="Resource_4c57u"]
 script = ExtResource("9_4c57u")
 nutrition = 20.0
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
 
+[sub_resource type="Resource" id="Resource_074og"]
+script = ExtResource("10_efxa6")
+nutrition = 1.0
+metadata/_custom_type_script = "uid://d1dgj1rs2fdji"
+
 [sub_resource type="Resource" id="Resource_ycdy4"]
 script = ExtResource("9_4c57u")
 nutrition = -10.0
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
 
+[sub_resource type="Resource" id="Resource_cegan"]
+script = ExtResource("10_efxa6")
+nutrition = -1.0
+metadata/_custom_type_script = "uid://d1dgj1rs2fdji"
+
 [sub_resource type="Resource" id="Resource_w48qg"]
 script = ExtResource("9_4c57u")
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
+
+[sub_resource type="Resource" id="Resource_82xsv"]
+script = ExtResource("10_efxa6")
+metadata/_custom_type_script = "uid://d1dgj1rs2fdji"
 
 [sub_resource type="Resource" id="Resource_vivmo"]
 script = ExtResource("9_4c57u")
 nutrition = 200.0
 metadata/_custom_type_script = "uid://c6qin4lc6t6ov"
+
+[sub_resource type="Resource" id="Resource_getpj"]
+script = ExtResource("10_efxa6")
+nutrition = 3.0
+metadata/_custom_type_script = "uid://d1dgj1rs2fdji"
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_lquwl")
@@ -71,6 +101,7 @@ script = ExtResource("8_kek77")
 job = 0
 modifiers = SubResource("Resource_efxa6")
 title = "Stove 1"
+pull = SubResource("Resource_2cqfq")
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
 [node name="Stove 2" type="Marker2D" parent="LocationManager"]
@@ -79,6 +110,7 @@ script = ExtResource("8_kek77")
 job = 1
 modifiers = SubResource("Resource_dg77c")
 title = "Stove 2"
+pull = SubResource("Resource_yaehf")
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
 [node name="Counter 1" type="Marker2D" parent="LocationManager"]
@@ -87,6 +119,7 @@ script = ExtResource("8_kek77")
 job = 2
 modifiers = SubResource("Resource_4c57u")
 title = "Counter 1"
+pull = SubResource("Resource_074og")
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
 [node name="Basin" type="Marker2D" parent="LocationManager"]
@@ -95,6 +128,7 @@ script = ExtResource("8_kek77")
 job = 3
 modifiers = SubResource("Resource_ycdy4")
 title = "Basin"
+pull = SubResource("Resource_cegan")
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
 [node name="Counter 2" type="Marker2D" parent="LocationManager"]
@@ -103,6 +137,7 @@ script = ExtResource("8_kek77")
 job = 4
 modifiers = SubResource("Resource_w48qg")
 title = "Counter 2"
+pull = SubResource("Resource_82xsv")
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
 [node name="Pantry" type="Marker2D" parent="LocationManager"]
@@ -110,6 +145,7 @@ position = Vector2(1036, 277)
 script = ExtResource("8_kek77")
 modifiers = SubResource("Resource_vivmo")
 title = "Pantry"
+pull = SubResource("Resource_getpj")
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
 [node name="GameClock" type="Node" parent="."]
