@@ -89,7 +89,7 @@ func apply_location_modifiers() -> void:
 	if _current_location == null:
 		return
 
-	var modifiers: Mood = _current_location.modifiers
+	var modifiers: LocationModifiers = _current_location.modifiers
 	#modifiers are given in hour granularity, normalize by GAME_TICKS_PER_IN_GAME_HOUR for correct numbers per tick
 	_mood.nutrition += modifiers.nutrition / GameConstants.GAME_TICKS_PER_IN_GAME_HOUR
 
