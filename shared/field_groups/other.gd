@@ -20,12 +20,12 @@ class_name OtherFields extends BaseStatGroup
 		state = value
 		stat_changed.emit()
 
-@export var assigned_job: JobConstants.JOB = JobConstants.JOB.UNASSIGNED:
+var assigned_job: Job = null:
 	set(value):
 		assigned_job = value
 		stat_changed.emit()
 
-func get_keys() -> Array[String]:
+static func get_keys() -> Array[String]:
 	return [
 		"owner_relationship",
 		"currency",

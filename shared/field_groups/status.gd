@@ -28,7 +28,7 @@ class_name StatusFields extends BaseStatGroup
 		extra_stress = _clamp_value(value)
 		stat_changed.emit()
 
-func get_keys() -> Array[String]:
+static func get_keys() -> Array[String]:
 	return [
 		"stress",
 		"health",

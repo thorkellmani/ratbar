@@ -26,7 +26,7 @@ class_name PersonalityFields extends BaseStatGroup
 		stat_changed.emit()
 
 
-func get_keys() -> Array[String]:
+static func get_keys() -> Array[String]:
 	return [
 		"greed",
 		"temper",

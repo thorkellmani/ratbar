@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_dgcfd")
-nutrition = 3.0
-stimulation = 2.0
+nutrition = 2.0
+stimulation = 3.0
+social = 2.0
 metadata/_custom_type_script = "uid://d1dgj1rs2fdji"

@@ -97,7 +97,6 @@ Continuous stats, -100 to 100. 0 = neutral. Negative = deprived. Positive = sati
 | Collection | Key | Scale | Notes |
 |---|---|---|---|
 | `job_skills` | JOB | 0-10 | Permanent. Increments slowly with active work. Never decays. |
-| `addiction` | VICE | 0-100 | Escalates with use, decays with abstinence at vice-specific rates. |
 | `camaraderie` | rat_id | -100 to 100 | Asymmetric per pair. Starts near 0 on first meeting. |
 
 ---
@@ -132,28 +131,17 @@ Each need tracks its last fulfillment source. Repeating the same source yields d
 | `energy` | Broadly linear. Modest increase below 0. Steeper but not dramatic around -40 to -50. Functional degradation rather than crisis. |
 | `stimulation` | Stable across the full range. Even when positive, still contributes a gentle pull toward stimulating activities. Shallow slope throughout. |
 | `social` | Progressively steepening as it goes negative. No dramatic cliff — loneliness builds steadily the deeper it goes. |
-| `vice_satisfaction` | Curve shape scales with addiction level. Low addiction is nearly flat. High addiction mirrors nutrition — steep and urgent. |
+| `vice_satisfaction` | Keyed on its own raw value, same as the other four — not on addiction (addiction tracking is shelved, see Vices below). Low right after use, sharp rise as satisfaction drops, climbing to a peak that rivals `nutrition`/`energy` — vice is fast and easy to reach for, so it competes hard once a rat is deprived, not a last resort. |
 
 Needs do not directly represent mood. They feed into stress.
 
-### Vices & Addiction
+### Vices
 
-Each rat is generated with one primary vice, weighted by personality with enough chaos to produce misfits. Additional vices can be acquired during play as a result of prolonged high stress.
+Vice is abstracted into a single need, `vice_satisfaction` — no per-vice type (`smoking`/`drinking`/`drugs`/`sex`/`gambling`/`fighting`) is tracked individually, and there is no per-rat addiction stat. What used to be six distinct vices with independent escalation/decay rates is now just "the rat used a vice" satisfying the one abstracted need, same as any other action satisfies its need.
 
-**Vice list:** `smoking`, `drinking`, `drugs`, `sex`, `gambling`, `fighting`
+The owner provides or withholds vices. Providing them satisfies `vice_satisfaction` and improves relationship short-term. Withholding raises stress and degrades the relationship.
 
-Addiction level multiplies how urgently `vice_satisfaction` decays and how much relief using the vice provides. Usage increases addiction at the vice's `addiction_escalation_rate`. Abstinence decreases it at the `addiction_decay_rate` — varies significantly by vice type.
-
-| Vice | Escalation | Decay |
-|---|---|---|
-| `smoking` | Slow | Slow |
-| `drinking` | Moderate | Moderate |
-| `drugs` | Fast | Very slow |
-| `sex` | Moderate | Negligible |
-| `gambling` | Moderate | Slow — but spikes fast on re-exposure |
-| `fighting` | Fast | Moderate |
-
-The owner provides or withholds vices. Providing them satisfies needs and improves relationship short-term. Addiction escalates over time, making the rat more expensive and more dependent. Withholding raises stress and degrades the relationship.
+**Deliberately shelved, not designed away** — addiction/resistance (a stat that makes repeated use cost more or provide less relief over time, escalating the owner's dependency the way the original per-vice `addiction_escalation_rate`/`addiction_decay_rate` did) may come back later. For now the only friction is the existing money cost of providing a vice at all — there is no additional entrapment mechanic layered on top yet.
 
 ### Stress
 
@@ -178,7 +166,7 @@ Stress increases from:
 
 Stress decreases from:
 - Met needs
-- Vices — the fastest and most potent stress relief in the simulation. This creates the core feedback loop: stress → vice → addiction → abstinence stress → vice.
+- Vices — the fastest and most potent stress relief in the simulation. (The stress → vice → addiction → abstinence stress → vice feedback loop this used to describe is on hold along with addiction tracking — see Vices above.)
 
 #### Breaking Point
 

@@ -1,4 +1,4 @@
-class_name MoodUrgency extends Resource
+class_name NeedUrgency extends Resource
 
 @export var nutrition: Curve
 @export var energy: Curve

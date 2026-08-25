@@ -1,3 +1,3 @@
 class_name NeedUrgencies extends Resource
 
-@export var mood_urgencies: MoodUrgency
+@export var need_urgencies: NeedUrgency

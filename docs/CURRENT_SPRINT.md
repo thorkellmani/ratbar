@@ -1,60 +1,60 @@
-# Current Sprint — Full Need Wiring
+# Current Sprint — Need Decay
 
-Goal: extend `Location.pull` and `Location.modifiers` from the nutrition-only slice built in `docs/sprints/03-location-pull.md` to all five needs (`energy`, `social`, `stimulation`, `vice_satisfaction` join `nutrition`), and extend `NeedsEvaluator`'s formula from a single-need read into a genuine `sum(need_urgency[n] × pull[n])` across all five. This is the sprint every prior sprint's scope-limiting has been deferring to — see the "Next sprint" notes in both `docs/sprints/01-minimal-watchable-loop.md` and `docs/sprints/03-location-pull.md`.
+Goal: give all five needs a passive, flat baseline decay every tick — the missing layer that's been blocking real tuning last sprint (job/location modifiers, `pull` values, `NeedsEvaluator`'s power mean were all authored/verified against a rat whose needs never move unless a location actively pushes them). Location and job `modifiers` (built last sprint) become an *offset* against this baseline instead of the only thing moving a need at all. Once needs are continuously drifting rather than static, several downstream problems become real for the first time — this sprint also covers those.
 
-## Open design questions this sprint needs to resolve
-
-- **Combination logic.** The design doc's formula (`RAT_SIMULATION.md` → Action Selection → step 8) is a flat weighted sum: `sum(need_urgency[n] × modified_tag_value[n])`. Dave Mark's Infinite Axis Utility System (see `docs/RAT_SIMULATION_BACKLOG.md` References) argues for multiplying independently-normalized axes instead of summing them, specifically to avoid one need's urgency spike getting diluted or drowned out by four other lukewarm ones. Needs a real decision, not a default — re-derive rather than carry the single-need sprint's formula forward unexamined.
-- **Curve shapes for the other four needs.** Only a `nutrition` `Curve` exists in `need_urgencies.tres` today. `RAT_SIMULATION.md`'s per-need curve-shape table (energy: broadly linear; stimulation: shallow throughout; social: progressively steepening; vice_satisfaction: scales with addiction level) needs four more `Curve` resources, each confirmed to output the same `0..1` range as `nutrition`'s — that comparability is load-bearing for whichever combination logic gets picked.
+Pulls from `docs/RAT_SIMULATION_BACKLOG.md` sections 1.7, 3, 6.5, 6.6b, 11.
 
 ## Design decisions locked this sprint
 
-- **`modifiers` stays job-agnostic; job exertion gets its own owned modifiers, summed with the location's.** A job's inherent physical cost/benefit (e.g. "dishwashing burns energy") is a fact about the *role*, not the *place*, and must not be smuggled into a location's per-need `modifiers` field as a same-need or cross-need proxy. It's authored on a separate job-owned modifiers structure and added to `location.modifiers` each tick — see the new `Job Modifiers` task below. Each need's `modifiers` field (location- or job-owned) stays literal to its own domain: `modifiers.nutrition` is strictly "does this affect food in the rat," `modifiers.energy` is strictly "does this tire the rat out," etc. No clamping is needed on the summed value itself — it only ever feeds into `mood.*`'s own already-clamped setter.
-- **`pull` stays location-only; jobs have no `pull`, only `employment_pressure`.** Jobs are owner-assigned, never chosen by the rat's own action-selection, so there's no scenario where a job needs to compete for attention via an appeal signal the way locations do via `pull`. `employment_pressure` (already built) is the correct and only job-side scoring mechanism — no job-level `pull` field is needed or planned.
-- **`LocationPull`'s scale changes from `-3..+3` to `0..7`, with `0` now strictly meaning "not a factor for this need at this location" — never a real judgment.** This replaces the prior meaning of `0` ("unbothered," a real Likert point) and removes negative values entirely. Reasons, from working through concrete scenarios: (1) `urgency × pull` with negative `pull` made desperation *amplify rejection* of a repulsive-but-real option instead of eventually overriding it — the "hungry enough to eat a dusty nutritional cube" case needs `pull` to only ever grow toward mattering as urgency rises, never shrink further negative; (2) `pull` was never meant to encode raw nutritional value (that's `modifiers`) — it encodes preference, and a location having *any* real value for a need should always demand an explicit, non-zero `pull` judgment, which needs `0` to unambiguously mean "excluded" so the omission is detectable (`modifiers[need] != 0` but `pull[need] == 0` is now a real error condition, not a legitimate authored state); (3) as a side effect, this also matches IAUS's "only score considerations that actually apply" pattern if multiply is ever adopted later. All six locations' existing `pull.nutrition` values (Pantry `+3`, cook stations `+1`, Dishwasher `-1`, Bartender `0`) predate this change and need re-authoring under the new scale, not a mechanical shift — see task below.
-- **Job↔Location assignment moves from `Location.job` to a `JobManager`-owned mapping.** `Location` becomes purely a physical/appeal/modifiers carrier — job-assignment bookkeeping centralizes in `JobManager`, mirroring how rat↔job assignment already works there (`_ASSIGNED_JOBS: Dictionary[int, JOB]`). Shape: `Dictionary[JobConstants.JOB, Array[Location]]`, plural per job — multiple physical stations can serve the same job (matches `LocationManager.get_job_locations()`'s existing `Array[Vector2]` return, and the backlog's job-slots/pods design). See the new task below for touch points.
+- **Baseline decay is flat and uniform across all five needs — no per-need state or personality-trait branching.** The backlog's original spec had energy decay faster while `WORKING`, social decay scaled by `socialness`, and vice_satisfaction decay scaled by `stress`/`addiction`. Rejected as inconsistent — building dynamic behavior for only one or two needs while the rest stay flat is arbitrary. All five needs get one flat per-tick rate (individually tuned for magnitude, structurally identical treatment). State-dependent variation (a job draining energy faster, a location boosting nutrition) stays entirely in the existing `LocationModifiers`/`JobModifiers` layer, which already gates on `WORKING`/stationary — adding a second, separate state-conditional inside decay itself would be two mechanisms pointed at the same knob.
+- **`vice_satisfaction`'s stress/addiction-coupling (backlog 3.5) is dropped, not just deferred.** Addiction was removed entirely last sprint (vice simplified to a plain need); Stress System (backlog section 4) isn't built. Revisit only once Stress System exists as its own sprint — don't reach into it early.
+- **Stimulation's "repetitive/unstimulating periods" condition (backlog 3.4) becomes flat baseline decay, not a repetition tracker.** Consistent with the flat-decay decision above.
+
+## Open design questions this sprint needs to resolve
+
+- **Switching inertia mechanism (backlog 6.6b).** Continuous decay means two near-tied locations' scores will drift across each other repeatedly; without a threshold, a rat near a tie could flicker its destination every reevaluation. Needs deciding: what counts as "near-tied" (fixed score-gap threshold vs. relative to the scores involved); whether the threshold only guards switching away from a *current* destination or also applies when picking between options from idle; whether `employment_pressure`'s flat additive bonus needs special handling so it doesn't create a permanent thumb on the scale that defeats the threshold for job locations specifically.
+- **Repetition penalty shape (backlog 6.5, 1.7).** Needs deciding: which "source" fields to track (the backlog sketches `last_nutrition_source`, `last_stimulation_source`, `last_social_activity`/`last_social_partner_id` — do all four apply now that some of these needs work differently than originally designed, e.g. `social` no longer has a partner-selection mechanic built); how the penalty decays/resets (backlog: resets after visiting a different source in between); how it interacts with `pull` vs. `modifiers` (is the penalty a `pull` reduction — decision-scoring only — or does it also reduce the actual `modifiers` payout?).
+- **Baseline decay's scope while traveling.** Does baseline decay apply during `PROCEEDING_TO_LOCATION`/`PROCEEDING_TO_WORK` (mid-travel), same as it does while stationary? Location/job `modifiers` currently only apply while stationary — baseline decay, as "natural entropy," should probably run regardless of travel state, but confirm before implementing.
 
 ## Tasks
 
-### `LocationPull` resource
-- [ ] Add `energy`, `social`, `stimulation`, `vice_satisfaction` fields to `LocationPull`, same pattern as `nutrition`: clamped `-3..+3`, setter emits `stat_changed`
+### 1. Baseline decay
+- [ ] Add a flat per-tick decay rate for each of the five needs, applied in `Rat.apply_stat_tick()` alongside the existing location/job modifier summing
+- [ ] Resolve the traveling-state open question above, then implement accordingly
+- [ ] Tune each need's rate individually for magnitude (structure stays identical across all five — see locked decision above)
 
-### `NeedUrgencies` / `MoodUrgency`
-- [ ] Add `Curve` resources for `energy`, `stimulation`, `social`, `vice_satisfaction`, shaped per `RAT_SIMULATION.md`'s per-need description
-- [ ] Confirm each curve's output range matches `nutrition`'s (`0..1`) — required for the needs to be comparable once summed/multiplied
+### 2. Re-verify/retune against live decay
+- [ ] Re-run last sprint's nutrition-slide test (`docs/ALGORITHM_RESEARCH.md`) with baseline decay active — confirm the starvation crossover (Pantry overtaking work around `nutrition ≈ -52`) still holds, or retune if baseline decay shifts it
+- [ ] Confirm last sprint's location/job `modifiers` values still read sensibly as *offsets* against the new baseline (e.g. Pantry's `nutrition=20` should now visibly outpace baseline decay, not just be the only source of movement)
 
-### Location values
-- [ ] Reclassify all six locations' existing `pull.nutrition` values under the new `0..7` scale (`0` = not a factor) — a fresh judgment call per location, not a mechanical shift of the old `-3..+3` numbers
-- [ ] Hand-author `pull` for all four new needs across all six locations (Pantry, three cook stations, Dishwasher, Bartender)
-- [ ] Hand-author `modifiers` for all four new needs across all six locations (the physical per-hour rate — independent judgment from `pull`, same as nutrition's split)
+### 3. Debug panel decay visibility
+- [ ] Expose the five baseline decay rates for live tuning (values visible/editable without a code change per test)
+- [ ] A way to isolate baseline decay from location/job modifiers for testing (e.g. a toggle to zero out modifiers temporarily), so decay's own magnitude can be verified in isolation before re-adding modifiers on top
 
-### `NeedsEvaluator`
-- [ ] Resolve the combination-logic question above, then implement it
-- [ ] Extend `evaluate()` to score across all five needs instead of just `nutrition`
-- [ ] Re-tune `JobConstants.EMPLOYMENT_PRESSURE` against the new multi-need formula — the nutrition-only crossover tuning (`0.376`) was solved for a single-term formula and is not guaranteed to hold once four more terms are added to every location's score
+### 4. Switching inertia
+- [ ] Resolve the open design question above
+- [ ] Implement the agreed threshold mechanism in `NeedsEvaluator`/`Rat.reevaluate_needs()`
 
-### Job↔Location assignment (new this sprint)
-- [ ] Remove `Location.job`
-- [ ] Add the job↔location mapping to `JobManager`: `Dictionary[JobConstants.JOB, Array[Location]]`
-- [ ] Open question — how is this dictionary populated: does `Location` keep a design-time-only field `JobManager` reads once at `_ready` to seed it, or does `JobManager` author the mapping directly via exported `Location` references, with no job-identity field on `Location` at all? Decide before implementing, not while implementing.
-- [ ] Update `LocationManager.get_job_locations()` — delegate to (or get replaced by) `JobManager`'s mapping instead of filtering `Location` children by a field that no longer exists
-- [ ] Update `NeedsEvaluator.evaluate()`'s `employment_pressure` check to query `JobManager` instead of reading `location.job`
-- [ ] Update `Rat._arrive_at_destination()`'s `WORKING`/`IDLE` decision to query `JobManager` instead of reading `_destination.job`
+### 5. Repetition penalty + fulfillment history
+- [ ] Resolve the open design question above
+- [ ] Add last-source tracking per the resolved shape (backlog 1.7)
+- [ ] Apply the penalty per the resolved shape (backlog 6.5)
 
-### Job Modifiers (new this sprint)
-- [ ] Create a job-owned modifiers structure — a `Mood`-shaped resource per `JobConstants.JOB`, holding each job's inherent per-need physical effect, independent of which station it happens to be performed at
-- [ ] Hand-author job modifiers for the five existing jobs (`HEAD_COOK`, `LINE_COOK`, `PREP_COOK`, `DISHWASHER`, `BARTENDER`) — at minimum for the needs already in scope this sprint; extend to all five if it's cheap to do while the values are already being reasoned about
-- [ ] Update `apply_stat_tick` (section 2.4, already built) to sum `location.modifiers[need] + job_modifiers[assigned_job][need]` while the rat is stationary and actively assigned to the job matching its current location, instead of reading `location.modifiers` alone
+### 6. Owner pressure spike
+- [ ] Owner-triggered action temporarily boosts `employment_pressure` (backlog 11.1)
+- [ ] Spike decays back to base over time
+- [ ] Spike costs `owner_relationship` per rat, scaled so rats at lower relationship take a larger hit (backlog 11.2)
+- [ ] Consecutive spikes in quick succession apply escalating relationship damage (backlog 11.3)
 
 ## Test scenarios
 
-1. **Nutrition regression:** with all four new needs left neutral (`pull = 0`, urgency near baseline), the nutrition-only behavior from Sprint 3 still holds — same crossover, same location choices.
-2. **A second need moves the needle:** change `pull.energy` (or any non-nutrition need) on a location and confirm `NeedsEvaluator`'s scores shift accordingly, without touching `nutrition`.
-3. **Two urgent needs at once:** force two needs urgent simultaneously (e.g. `nutrition = -80`, `energy = -80`) with each best served by a different location. Confirm the chosen combination logic (sum vs. multiply) produces the intended winner — this is the real test of whichever design decision gets made above, not just a plumbing check.
-4. **Curve sanity check:** sample each new curve at a few points per `RAT_SIMULATION.md`'s described shape (e.g. confirm `social`'s curve steepens progressively rather than having a single cliff like `nutrition`'s).
-5. **Job modifier stacks with location modifier:** a rat assigned to a job with a nonzero job-modifier on some need (e.g. energy) shows a visibly different decay/gain rate for that need while working its station than an otherwise-identical rat idling at the same station unassigned — confirming the two sources combine rather than one silently overriding the other.
-6. **Job↔location reassignment doesn't touch `Location`:** reassigning which `Location`(s) serve a given job via `JobManager`'s mapping requires no change to the `Location` node itself — confirm `NeedsEvaluator`'s `employment_pressure` check and `Rat`'s `WORKING`/`IDLE` decision both follow the updated `JobManager` mapping immediately, not a stale value read from `Location`.
+1. **Nutrition regression:** rat doing nothing — `nutrition` drops meaningfully below baseline over an extended run, at a rate matching the tuned constant.
+2. **Per-job nutrition modifier still holds:** Head Chef vs. Dishwasher, identical starting nutrition, baseline decay active — Head Chef decays slower (its modifiers partially offset baseline), Dishwasher decays faster than baseline alone.
+3. **Switching inertia:** two near-tied locations — confirm no flicker between reevaluations; widen the gap past the threshold — confirm the rat switches cleanly.
+4. **Repetition penalty:** repeated consecutive use of the same source reduces its effective score; using a different source in between resets the penalty.
+5. **Owner pressure spike:** trigger a spike — job location scores rise, decay back to base over time; `owner_relationship` drops per rat, more for already-low-relationship rats; rapid repeated spikes escalate the relationship cost.
 
 ## Notes for later sprints
 
-- **Byproduct: `Location.job` could become decouplable from `Location.modifiers`/`pull`.** Once every need's physical effect is authored as a literal, job-agnostic fact about the *place* rather than the *job* (this sprint's job-modifiers split, below), `Location.job` stops being load-bearing for stat effects — it becomes pure metadata (employment_pressure eligibility, which `job_skills[]` entry progresses while working there). That's a real precondition for dynamic job-to-location assignment later, but it's only a partial enabler: `job_skills` progression and `employment_pressure` still need *some* current job↔location resolution mechanism beyond the fixed 1:1 `Location.job` field, which doesn't exist yet and is out of scope for this sprint. Worth a real design pass in a future sprint, not something to build now.
+- Stress System (backlog section 4) is the natural next sprint after this one — it's what `vice_satisfaction`'s dropped stress-coupling (3.5) and nutrition/energy's eventual stress-accumulation feedback (4.1) both need. Don't pull it in early just because this sprint touches decay.
+- Job Modifiers values authored last sprint are still first-pass/temp — expect another tuning pass once baseline decay gives them something real to offset against (see task 2 above).

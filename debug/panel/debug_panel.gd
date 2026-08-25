@@ -1,9 +1,12 @@
 extends CanvasLayer
 
-signal assign_job_requested(rat: Rat, job: JobConstants.JOB)
+signal assign_job_requested(rat: Rat, job: Job)
 signal generate_rat_requested
 
 var _rat: Rat
+
+
+@onready var _job_manager: JobManager = get_parent().get_node("JobManager")
 
 # Dictionary mapping stat keys to their corresponding LineEdit inputs.
 var actions := {
@@ -22,12 +25,12 @@ var debug_panel_structure: Dictionary[String, Callable] = {
 				"set": func(value): _rat.personality.set(stat_name, value),
 			}
 		return result,
-	"Mood": func():
+	"Needs": func():
 		var result := {}
-		for stat_name in _rat.mood.get_keys():
+		for stat_name in _rat.needs.get_keys():
 			result[stat_name] = {
-				"get": func(): return _rat.mood.get(stat_name),
-				"set": func(value): _rat.mood.set(stat_name, value),
+				"get": func(): return _rat.needs.get(stat_name),
+				"set": func(value): _rat.needs.set(stat_name, value),
 			}
 		return result,
 	"Statuses": func():
@@ -38,22 +41,6 @@ var debug_panel_structure: Dictionary[String, Callable] = {
 				"set": func(value): _rat.status.set(stat_name, value),
 			}
 		return result,
-	"Job skills": func():
-		var result := {}
-		for stat_name in _rat.job_skills.get_keys():
-			result[stat_name] = {
-				"get": func(): return _rat._job_skills.get(stat_name),
-				"set": func(value): _rat._job_skills.set(stat_name, value),
-			}
-		return result,
-	"Vice": func():
-		var result := {}
-		for stat_name in _rat.vice.get_keys():
-			result[stat_name] = {
-				"get": func(): return _rat.vice.get(stat_name),
-				"set": func(value): _rat.vice.set(stat_name, value),
-			}
-		return result,
 	"Other": func():
 		var result := {}
 		for key in _rat.other.get_keys():
@@ -62,15 +49,6 @@ var debug_panel_structure: Dictionary[String, Callable] = {
 				"set": func(value): _rat.other.set(key, value)
 			}
 		return result
-}
-
-var assign_job_group = {
-	"Head cook": JobConstants.JOB.HEAD_COOK,
-	"Line cook": JobConstants.JOB.LINE_COOK,
-	"Prep cook": JobConstants.JOB.PREP_COOK,
-	"Dishwasher": JobConstants.JOB.DISHWASHER,
-	"Bartender": JobConstants.JOB.BARTENDER,
-	"Clear job": JobConstants.JOB.UNASSIGNED
 }
 
 func generate_button(label: String, callback: Callable) -> Button:
@@ -99,10 +77,11 @@ func _initialize() -> void:
 	$Scroller/Panel.add_child(assign_job_panel_group)
 	assign_job_panel_group.add_child(job_vbox)
 	assign_job_panel_group.folded = true
-	for job in assign_job_group:
-		job_vbox.add_child(generate_button(job, func(): assign_job_requested.emit(_rat, assign_job_group[job])))
-
-
+	
+	for job in _job_manager.get_jobs():
+		job_vbox.add_child(generate_button(job.title, func(): assign_job_requested.emit(_rat, job)))
+	job_vbox.add_child(generate_button("Unassign", func(): assign_job_requested.emit(_rat, null)))
+	
 	for action in actions:
 		$Scroller/Panel.add_child(generate_button(actions[action].label, func(): actions[action].signal.emit()))
 	$Scroller/Panel.add_child(TimeButton.new())
@@ -116,19 +95,15 @@ func _update() -> void:
 			child.update()
 
 func _connect_signals() -> void:
-	_rat.mood.stat_changed.connect(_update)
+	_rat.needs.stat_changed.connect(_update)
 	_rat.personality.stat_changed.connect(_update)
 	_rat.status.stat_changed.connect(_update)
-	_rat.vice.stat_changed.connect(_update)
-	_rat.job_skills.stat_changed.connect(_update)
 	_rat.other.stat_changed.connect(_update)
 
 func _disconnect_signals() -> void:
-	_rat.mood.stat_changed.disconnect(_update)
+	_rat.needs.stat_changed.disconnect(_update)
 	_rat.personality.stat_changed.disconnect(_update)
 	_rat.status.stat_changed.disconnect(_update)
-	_rat.vice.stat_changed.disconnect(_update)
-	_rat.job_skills.stat_changed.disconnect(_update)
 	_rat.other.stat_changed.disconnect(_update)
 
 func inspect_rat(rat: Rat) -> void:

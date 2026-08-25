@@ -10,11 +10,9 @@ const DEFAULT_VALUES := preload("res://entities/rat/generation_defaults/generati
 var id: int
 
 var _title: String
-var _mood: Mood
+var _needs: Needs
 var _personality: Personality
 var _status: Status
-var _vice: Vice
-var _job_skills: JobSkills
 var _camaraderie: Camaraderie
 var _other: Other
 
@@ -31,17 +29,11 @@ var _destination: Location
 var personality: Personality:
 	get: return _personality
 
-var mood: Mood:
-	get: return _mood
+var needs: Needs:
+	get: return _needs
 
 var status: Status:
 	get: return _status
-
-var vice: Vice:
-	get: return _vice
-
-var job_skills: JobSkills:
-	get: return _job_skills
 
 var camaraderie: Camaraderie:
 	get: return _camaraderie
@@ -53,7 +45,7 @@ var other: Other:
 
 func _process(delta: float) -> void:
 	match other.state:
-		RatConstants.STATE.PROCEEDING_TO_LOCATION:
+		RatConstants.STATE.PROCEEDING_TO_WORK, RatConstants.STATE.PROCEEDING_TO_LOCATION:
 			global_position = global_position.move_toward(_destination.global_position, 400 * delta)
 			if global_position == _destination.global_position:
 				_arrive_at_destination()
@@ -79,32 +71,42 @@ func initialize(
 	_personality.laziness = _randomize_personality_trait("laziness")
 
 	_status = DEFAULT_VALUES.default_status.duplicate()
-	_vice = DEFAULT_VALUES.default_vice.duplicate()
-	_mood = DEFAULT_VALUES.default_mood.duplicate()
-	_job_skills = DEFAULT_VALUES.default_job_skills.duplicate()
+	_needs = DEFAULT_VALUES.default_needs.duplicate()
 	_camaraderie = Camaraderie.new()
 	_other = Other.new()
 
-func apply_location_modifiers() -> void:
+func apply_modifiers(assigned_job: Job) -> void:
 	if _current_location == null:
 		return
 
-	var modifiers: LocationModifiers = _current_location.modifiers
-	#modifiers are given in hour granularity, normalize by GAME_TICKS_PER_IN_GAME_HOUR for correct numbers per tick
-	_mood.nutrition += modifiers.nutrition / GameConstants.GAME_TICKS_PER_IN_GAME_HOUR
+	var location_modifiers: LocationModifiers = _current_location.modifiers
+	var need_keys = NeedFields.get_keys()
+	
+	for need in need_keys:
+		#modifiers are given in hour granularity, normalize by GAME_TICKS_PER_IN_GAME_HOUR for correct numbers per tick
+		var total_modifiers = location_modifiers[need]
+		#apply employment modifiers if rat has job, rat is at job and rat is working
+		if assigned_job != null && _current_location in assigned_job.locations && other.state == RatConstants.STATE.WORKING:
+			total_modifiers += assigned_job.modifiers[need] if assigned_job.modifiers[need] != null else 0
+		
+		_needs[need] += total_modifiers / GameConstants.GAME_TICKS_PER_IN_GAME_HOUR
 
 
 func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		rat_clicked.emit(self)
 
-func reevaluate_needs(job: JobConstants.JOB, locations: Array[Location]) -> void:
+func reevaluate_needs(job: Job, locations: Array[Location]) -> void:
 	var intended_location: Location = NeedsEvaluator.evaluate(self, job, locations)
 	_destination = intended_location
-	other.state = RatConstants.STATE.PROCEEDING_TO_LOCATION
-
+	print(_destination.title if _destination else "No destination")
+	if _destination:
+		other.state = RatConstants.STATE.PROCEEDING_TO_WORK if job != null && _destination in job.locations else RatConstants.STATE.PROCEEDING_TO_LOCATION
+	else:
+		other.state = RatConstants.STATE.IDLE
+		
 func _arrive_at_destination() -> void:
-	if _destination.job != JobConstants.JOB.UNASSIGNED:
+	if  other.state == RatConstants.STATE.PROCEEDING_TO_WORK:
 		other.state = RatConstants.STATE.WORKING
 	else:
 		other.state = RatConstants.STATE.IDLE

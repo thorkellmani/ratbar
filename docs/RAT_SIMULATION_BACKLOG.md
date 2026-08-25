@@ -13,7 +13,7 @@ Godot has no automated test runner — verification is done by running the scene
 ### 0.1 Rat inspector overlay
 - [x] Clicking a rat in the scene opens a debug panel showing all internal stats in real time
 - [x] Panel updates each tick (no manual refresh needed)
-- [ ] Panel displays:
+- [x] Panel displays:
   - [x] greed
   - [x] temper
   - [x] socialness

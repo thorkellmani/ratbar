@@ -10,6 +10,7 @@ var next_rat_id: int = 1
 var selected_rat: Rat
 
 var _rat_tick_slot_registry: Array[TickSlotRegistry] = []
+
 @onready var _location_manager: LocationManager = get_parent().get_node("LocationManager")
 @onready var _job_manager: JobManager = get_parent().get_node("JobManager")
 
@@ -41,7 +42,7 @@ func _assign_slot(rat: Rat) -> void:
 func _on_game_clock_tick(tick_count: int) -> void:
 	#iterate over all rats and apply location modifiers
 	for rat: Rat in Colony.colony.values():
-		rat.apply_location_modifiers()
+		rat.apply_modifiers(_job_manager.get_assigned_job(rat))
 		_check_rat_reevaluation(tick_count, rat)
 
 func _check_rat_reevaluation(tick_count: int, rat: Rat) -> void:
