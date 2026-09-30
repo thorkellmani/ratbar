@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="NeedUrgencies" load_steps=9 format=3 uid="uid://dkavutvvhrf76"]
 
 [ext_resource type="Script" uid="uid://bl7y58reumro7" path="res://entities/rat/stats/need/need_urgency.gd" id="1_8encs"]
-[ext_resource type="Script" uid="uid://3411vrpptvy2" path="res://entities/rat/needs_evaluator/need_urgencies.gd" id="1_tfeai"]
+[ext_resource type="Script" uid="uid://3411vrpptvy2" path="res://entities/rat/needs_evaluator/urgencies/need_urgencies.gd" id="1_tfeai"]
 
 [sub_resource type="Curve" id="Curve_io38m"]
 _limits = [0.0, 1.0, -100.0, 100.0]

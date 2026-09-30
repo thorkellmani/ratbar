@@ -19,7 +19,7 @@ var actions := {
 var debug_panel_structure: Dictionary[String, Callable] = {
 	"Personality": func():
 		var result := {}
-		for stat_name in _rat.personality.get_keys():
+		for stat_name in Personality.get_keys():
 			result[stat_name] = {
 				"get": func(): return _rat.personality.get(stat_name),
 				"set": func(value): _rat.personality.set(stat_name, value),
@@ -27,7 +27,7 @@ var debug_panel_structure: Dictionary[String, Callable] = {
 		return result,
 	"Needs": func():
 		var result := {}
-		for stat_name in _rat.needs.get_keys():
+		for stat_name in Needs.get_keys():
 			result[stat_name] = {
 				"get": func(): return _rat.needs.get(stat_name),
 				"set": func(value): _rat.needs.set(stat_name, value),
@@ -35,7 +35,7 @@ var debug_panel_structure: Dictionary[String, Callable] = {
 		return result,
 	"Statuses": func():
 		var result := {}
-		for stat_name in _rat.status.get_keys():
+		for stat_name in Status.get_keys():
 			result[stat_name] = {
 				"get": func(): return _rat.status.get(stat_name),
 				"set": func(value): _rat.status.set(stat_name, value),
@@ -43,7 +43,7 @@ var debug_panel_structure: Dictionary[String, Callable] = {
 		return result,
 	"Other": func():
 		var result := {}
-		for key in _rat.other.get_keys():
+		for key in Other.get_keys():
 			result[key] = {
 				"get": func(): return _rat.other.get(key),
 				"set": func(value): _rat.other.set(key, value)
