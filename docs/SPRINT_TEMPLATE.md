@@ -1,6 +1,6 @@
 # Sprint Template
 
-Resolve open design questions before writing the task list. Keep the decision log as a historical record: use bullets and strike through decisions that a later decision replaces.
+Keep one active sprint. Resolve open design questions before writing its task list. Finish every required test and the retrospective before closing it. At closeout, fold completed work, test results, findings, and later considerations into the backlog; close the relevant backlog items; update historical logs; then delete `docs/CURRENT_SPRINT.md`. Create the next sprint only when its scope is chosen. Keep decision logs as historical records: use bullets and strike through decisions that a later decision replaces.
 
 ## Current sprint format
 

@@ -21,9 +21,9 @@ All five jobs now exist in `main.tscn` (`HeadChef`, `SousChef`, `LineCook`,
 and its own distinct `modifiers` values — Head Chef's most physically
 draining and isolating (highest-authority, on-call all shift), Bartender's
 the most social and vice-adjacent, Dishwasher the most isolated and
-tedious. **First-pass/temp values, not tuned** — see `docs/CURRENT_SPRINT.md`
-and `docs/ALGORITHM_RESEARCH.md`; nothing in the sim is meaningfully tunable
-yet since need decay isn't implemented.
+tedious. **First-pass/temp values, not tuned** — see
+`docs/RAT_SIMULATION_BACKLOG.md` and `docs/ALGORITHM_RESEARCH.md` for the
+current decay and scoring behavior.
 
 **`JobConstants.JOB` (the old fixed enum) has been removed entirely.** It
 used to be the identity for "which job" everywhere — rat assignment,

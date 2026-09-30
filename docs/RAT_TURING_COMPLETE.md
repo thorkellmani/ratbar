@@ -2,7 +2,7 @@
 
 Definition of Done for the simulation's decision-making — general
 behavioral properties, not test cases with numbers. Accumulates across the
-whole project, unlike `docs/CURRENT_SPRINT.md`'s per-sprint scenarios. An
+whole project, unlike an active sprint's per-task scenarios. An
 entry stays open until observed in the running sim, not until the formula
 behind it is implemented.
 
@@ -26,6 +26,6 @@ behind it is implemented.
 
 ## Deliberately not on this list yet
 
-Addiction/resistance, need decay, job skills, hard crisis overrides — all
+Addiction/resistance, job skills, hard crisis overrides — all
 deferred on purpose, not abandoned. Add an entry once the system it depends
 on actually exists.

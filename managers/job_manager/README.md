@@ -1,10 +1,9 @@
 # managers/job_manager/
 
 - `JobConstants` — the `JOB` enum has been removed entirely; all that's left
-  is `EMPLOYMENT_PRESSURE` (currently `0.376`, solved for the old `pull`
-  scale and the old single-need formula — the IAUS combination formula is
-  now implemented in `NeedsEvaluator`, but this constant hasn't been
-  re-derived against it yet, see `docs/CURRENT_SPRINT.md`). See
+  is `EMPLOYMENT_PRESSURE` (currently `0.35`, used with the power-mean
+  formula in `NeedsEvaluator`; see `docs/ALGORITHM_RESEARCH.md` for the
+  observed nutrition crossover). See
   `entities/job/README.md` for why the enum went away.
 - `JobManager` — owner-driven rat ↔ job assignment (`_ASSIGNED_JOBS:
   Dictionary[int, Job]`, keyed by rat id, values are `Job` node references or

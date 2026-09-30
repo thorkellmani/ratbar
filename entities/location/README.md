@@ -14,7 +14,7 @@ Bartender, etc.). Two independent per-need fields, deliberately decoupled:
 - `pull: LocationPull` — hand-authored decision-scoring appeal, `0..7`. `0`
   means "not a factor for this need at this location" (excluded from scoring,
   not a real judgment); `1..7` is a real appeal judgment. See
-  `docs/CURRENT_SPRINT.md` for why the scale is `0..7` and not signed.
+  `docs/ALGORITHM_RESEARCH.md` for the scoring context.
 
 `Location` no longer knows what job (if any) it belongs to — `job:
 JobConstants.JOB` was removed. That link now lives on the other side: `Job`

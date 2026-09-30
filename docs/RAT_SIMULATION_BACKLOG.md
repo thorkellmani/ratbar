@@ -104,7 +104,7 @@ Godot has no automated test runner — verification is done by running the scene
 
 ## 2. Time & Tick Architecture
 
-Establishes the simulation's own clock, independent of Godot's per-frame `_process()` and independent of any individual rat's own timing. Everything downstream (need decay, stress accumulation, action selection cadence) is denominated against this, not against wall-clock time directly. See `docs/CURRENT_SPRINT.md` for the sprint this was designed and built in.
+Establishes the simulation's own clock, independent of Godot's per-frame `_process()` and independent of any individual rat's own timing. Everything downstream (need decay, stress accumulation, action selection cadence) is denominated against this, not against wall-clock time directly. See [Sprint 2](sprints/02-game-time.md) for its design history.
 
 ### 2.1 Game-time convention
 - [x] Adopt and document: 1 game-hour = 60 real seconds at 1x `Engine.time_scale`. `SECONDS_PER_GAME_TICK = 1.0`, `GAME_TICKS_PER_IN_GAME_HOUR = 60`.
@@ -127,11 +127,10 @@ Establishes the simulation's own clock, independent of Godot's per-frame `_proce
 **Test:** Generate N rats. Log which rat IDs get `reevaluate_needs` called on each tick over several ticks — confirm each rat's calls land only on ticks matching its assigned slot, and that removing the old Timer didn't leave decision-making dead (rats still eventually re-evaluate). ✅ Confirmed with multiple rats (distinguished via random `modulate` color), staggered rather than lockstep.
 
 ### 2.4 Need application, decoupled from decision cadence
-- [x] On every tick, for every rat unconditionally, `RatManager` calls `rat.apply_stat_tick()`
-- [x] While `state == PROCEEDING_TO_LOCATION` (mid-travel), the update applies nothing
-- [x] While stationary (`state` is `WORKING`/`IDLE`) and `current_location` is set, apply `current_location.modifiers.nutrition / GAME_TICKS_PER_IN_GAME_HOUR` to `mood.nutrition`
+- [x] On every tick, `RatManager` calls `rat.apply_game_tick_effects()` for every rat.
+- [x] Apply baseline decay during travel; while stationary at a location, add its per-hour modifiers. Add job modifiers only while working at an assigned job station.
 
-**Test:** Place a rat at the Pantry, stationary. Confirm `mood.nutrition` increases every tick, not just on the rat's own decision slot. Force the rat into `PROCEEDING_TO_LOCATION` — confirm nutrition stops changing until it arrives and goes stationary again. ✅ Confirmed, both halves.
+**Test:** Place a rat at the Pantry, stationary: nutrition rises every tick. During travel, all needs continue baseline decay, with no location or job effect. ✅ Confirmed in the Need Decay sprint.
 
 ### 2.5 `Rat` location tracking
 - [x] Add `current_location: Location` to `Rat`, set whenever a new `destination` is chosen
@@ -141,40 +140,14 @@ Establishes the simulation's own clock, independent of Godot's per-frame `_proce
 
 ---
 
-## 3. Need Decay
+## 3. Need Decay — Completed
 
-### 3.1 Nutrition decay
-- [ ] Nutrition decays at a baseline rate each tick while the rat is awake (target: roughly hungry twice per shift), independent of location — this is the passive metabolic drift, separate from the per-location application built in 2.4
+- [x] Apply flat, independently configurable baseline decay to nutrition, energy, stimulation, social, and vice satisfaction. Each starts at `-5` per game-hour in `need_decay_rate.tres`. Decay continues during travel; location and job modifiers offset it while applicable.
+  **Test:** With no location effect, all five needs fall at their configured rates while idle and traveling. At the Pantry, its `+20` nutrition modifier overcomes the `-5` baseline, and Pantry overtakes Head Chef around `nutrition = -52`. ✅ Confirmed.
 
-**Test:** Run the simulation for one in-game shift with a rat doing nothing. Confirm `nutrition` drops from 0 to below -40 by end of shift.
+**Findings:** The observed Pantry crossover stayed around `-52`. Modifier values remain first-pass tuning. A proposed primary-need lock was deferred because a chosen location can have positive appeal for a need while its net effect still lowers that need. See the [decision log](sprints/04-need-decay-decisions.md).
 
-### 3.1b Per-job nutrition modifier
-- [x] Covered by 2.4 — every `Location` (job stations and Pantry alike) already carries its own `modifiers.nutrition` (a per-hour rate), applied every tick a stationary rat spends there via `GAME_TICKS_PER_IN_GAME_HOUR`. The modifier lives on the `Location`, not on the job type or the rat — a job's nutrition effect is just whatever value its station's `Location` node carries, same as any other location. Current values: Pantry `200`, cook stations `20`, Dishwasher `-10`, Bartender `0`. Note: this same field is currently also read by `NeedsEvaluator` for decision-scoring — see the new Location Pull section for why that's slated to change.
-
-**Test:** Run a HEAD_COOK and a DISHWASHER for the same duration with identical starting nutrition (and 3.1's baseline decay active). HEAD_COOK nutrition should decay slower (its Location's positive modifier partially offsets baseline decay); DISHWASHER's negative modifier should make it decay faster than baseline.
-
-### 3.2 Energy decay
-- [ ] Energy decays while awake; faster while working
-
-**Test:** Run one rat with CURRENT_STATE=WORKING and another with CURRENT_STATE=IDLE for the same duration. Working rat's energy should be lower by a clear margin (>20% faster decay).
-
-### 3.3 Social decay
-- [ ] Social decays while awake
-- [ ] Decay rate scaled by `socialness` stat (high socialness → faster decay)
-
-**Test:** Run two rats with identical needs but socialness=100 and socialness=-100 for the same duration. Socialness=100 rat should have meaningfully lower social need.
-
-### 3.4 Stimulation decay
-- [ ] Stimulation decays during repetitive/unstimulating periods
-
-**Test:** Rat stuck in a dishwasher job for a full shift: stimulation should be negative by end of shift. Same rat given varied activities: stimulation should stay closer to 0.
-
-### 3.5 Vice satisfaction decay
-- [ ] `vice_satisfaction` decays proportional to stress level (high stress → faster decay)
-- [ ] Addiction level amplifies the decay rate
-
-**Test 1:** Two rats, same stress. One has addiction=0, one has addiction=80 for their vice. Addiction=80 rat should lose vice_satisfaction faster.
-**Test 2:** Same rat, stress=10 vs stress=80. High-stress condition produces faster vice_satisfaction decay.
+**Later considerations:** Observe whether scheduled decisions cause flicker before designing switching behavior. Define stopping conditions with each need's fulfillment activity, and define a fulfillment event before adding history or repetition penalties. Revisit stress-driven vice effects after stress exists. Tune decay and modifier values through play; add live controls or modifier isolation only when testing calls for them. Revisit owner-pressure spikes when relationship and stress costs can affect behavior.
 
 ---
 
