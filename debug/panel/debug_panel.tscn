@@ -16,3 +16,31 @@ horizontal_scroll_mode = 0
 [node name="Panel" type="VBoxContainer" parent="Scroller"]
 layout_mode = 2
 mouse_filter = 2
+
+[node name="StressReadout" type="Label" parent="Scroller/Panel"]
+layout_mode = 2
+text = "Stress: --"
+
+[node name="StressBreakdown" type="FoldableContainer" parent="Scroller/Panel"]
+layout_mode = 2
+title = "Stress breakdown"
+folded = true
+
+[node name="Details" type="VBoxContainer" parent="Scroller/Panel/StressBreakdown"]
+layout_mode = 2
+
+[node name="AverageUrgency" type="Label" parent="Scroller/Panel/StressBreakdown/Details"]
+layout_mode = 2
+text = "Average urgency: --"
+
+[node name="NeedTier" type="Label" parent="Scroller/Panel/StressBreakdown/Details"]
+layout_mode = 2
+text = "Need tier: --"
+
+[node name="WorkingRate" type="Label" parent="Scroller/Panel/StressBreakdown/Details"]
+layout_mode = 2
+text = "Working: --"
+
+[node name="NetRate" type="Label" parent="Scroller/Panel/StressBreakdown/Details"]
+layout_mode = 2
+text = "Net stress rate: --"

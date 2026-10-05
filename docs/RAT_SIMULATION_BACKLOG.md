@@ -44,7 +44,7 @@ Godot has no automated test runner — verification is done by running the scene
 - [x] Write new value back to the rat via the appropriate update function
 - [x] Clamp submitted value to the valid range for that stat before writing
 
-**Test:** Set `stress` to 100 via the override input. Confirm the rat's `crisis` changes to BURNOUT or REBELLION. Set `nutrition` to -80. Confirm the need decay and action selection reflect the new value immediately.
+**Test:** Set `stress` to 100 via the Statuses override input and confirm the readout updates and the value clamps at 100. Set `nutrition` to -80 and confirm need decay and action selection respond. Crisis entry remains future work in section 4.6.
 
 ### 0.3 Simulation speed control
 - [x] A debug control allows time-scaling the simulation (0.5×, 1×, 2×, 5×, 10×) so decay and stress tests can be verified in a reasonable amount of real time
@@ -153,25 +153,47 @@ Establishes the simulation's own clock, independent of Godot's per-frame `_proce
 
 ## 4. Stress System
 
-### 4.1 Stress accumulation from unmet needs
-- [ ] Each tick, unmet needs (negative values) add to stress, weighted by severity
+**Need-driven baseline completed:** A need value describes its condition; its urgency curve describes how strongly the rat wants that need addressed. Stress reflects how the rat feels over time, rather than raw need values alone. For stress calculation only, sample a need's urgency at full satisfaction (`+100`) while its **net change is positive** after baseline decay and applicable location and job effects; otherwise sample its current value. Average the five samples. The stored need and location-choice scoring remain unchanged. For example, Pantry nutrition rises by `+15` per game-hour (`+20` location, `-5` baseline) and qualifies; a location with positive `pull` but a falling need does not. The two thermometers discussed during design were an analogy, not two independent stats. `Rat` caches only the derived effective average urgency for the stress tick and debug display; the rate tier is calculated from that average on demand. Bad periods raise stress faster than good periods lower it; stress may affect bodily functions later. See the [stress decision log](sprints/05-stress-decisions.md) for design history.
 
-**Test:** Set a rat's nutrition to -80. Over 5 seconds of simulation, stress should climb. A rat with nutrition=10 should not gain stress from nutrition alone.
+**Provisional stress tiers:** Applied to the effective average urgency above, in stress points per game-hour. These are starting values to tune against the running game.
 
-### 4.2 Temper multiplier
+| Average urgency | Stress change |
+| --- | ---: |
+| Below `.28` | `-6` |
+| `.28` to below `.34` | `-3` |
+| `.34` to below `.38` | `-1` |
+| `.38` to below `.42` | `0` |
+| `.42` to below `.48` | `+2` |
+| `.48` to below `.58` | `+6` |
+| `.58` and above | `+12` |
+
+**System placement:** Stress logic lives under `systems/stress/` as a stateless script, with provisional tiers in an Inspector-editable `StressTuning` Resource. `RatManager` calls `Rat.apply_game_tick_effects()` once per rat per tick; that public method applies need effects, then stress effects. The crowded `Rat` class has an explicit TODO to move effect implementations out during the refactor sprint while retaining this public entry point.
+
+**Work pressure:** Performing an assigned job at one of its stations adds a provisional flat `+3` stress per game-hour to the need-tier rate. Merely holding a job or travelling to work adds none; this avoids rewarding repeated unassignment after shifts. The rate is applied after selecting the need tier and stored stress stays within `0..100`.
+
+**Completed test findings:** With nutrition at `-80`, the other needs at `+50`, and no job, average urgency was about `.509` before Pantry and `.321` while nutrition improved there; stress changed `60 → 60.10 → 60.05` over two ticks. Several depleted needs selected `+12/h`; all needs at `+100` selected `-6/h`. Active work added `+3/h`, travel added none, and stress clamped to `0..100`. The debug panel shows stress to two decimals and a collapsible breakdown of average urgency, need tier, work rate, and net rate. The maintainer confirmed the visual test. The displayed `Slow recovery -1/h` plus working `+3/h` yielded net `+2/h` in play.
+
+**Later considerations:** Tune tier thresholds and rates through play. Integrate `temper` and `owner_relationship` when those stats have wider gameplay roles; vice relief and breaking-point crises also remain future work. Move need and stress effect implementations out of `Rat` in the refactor sprint while keeping its public tick entry point.
+
+### 4.1 Need-driven stress accumulation
+- [x] Use effective average urgency to select a tiered stress-gain rate every tick.
+
+**Test:** With nutrition `-80`, other needs `+50`, no job, and stress `60`, the rat gains `.10` stress per tick before Pantry. At Pantry, nutrition improves and stress begins falling. ✅ Confirmed in simulation and visual testing.
+
+### 4.2 Temper multiplier (later)
 - [ ] High-`temper` rats accumulate stress faster from the same conditions
 
 **Test:** Two rats, identical unmet needs, temper=100 vs temper=-100. After 10 seconds, temper=100 rat has higher stress.
 
-### 4.3 Owner relationship effect on accumulation
+### 4.3 Owner relationship effect on accumulation (later)
 - [ ] Low `owner_relationship` → faster stress accumulation
 
 **Test:** Same rat, same unmet needs, set owner_relationship=-80 vs owner_relationship=+80. -80 condition produces faster stress gain.
 
-### 4.4 Stress decay from met needs
-- [ ] Positive need values reduce stress over time
+### 4.4 Need-driven stress recovery
+- [x] Use effective average urgency to select a tiered stress-recovery rate every tick.
 
-**Test:** Set a rat's stress to 60, all needs to +50. Stress should decrease over 10 seconds.
+**Test:** With all needs at `+100`, no active work, and stress `60`, stress falls `.10` per tick. At Pantry, the nutrition `-80` scenario's improving need changes the tier to `-3/h`, or `.05` recovery per tick. ✅ Confirmed in simulation and visual testing.
 
 ### 4.5 Vice as stress relief
 - [ ] Using a vice is the fastest stress relief

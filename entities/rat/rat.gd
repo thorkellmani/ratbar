@@ -6,6 +6,7 @@ signal rat_clicked(rat: Rat)
 
 const DEFAULT_VALUES := preload("res://entities/rat/generation_defaults/generation_defaults.tres")
 const DECAY_RATES := preload("res://entities/rat/stats/need/decay_rate/need_decay_rate.tres")
+const URGENCIES := preload("res://entities/rat/needs_evaluator/urgencies/need_urgencies.tres")
 
 #region Local variables
 var id: int
@@ -14,6 +15,7 @@ var _title: String
 var _needs: Needs
 var _personality: Personality
 var _status: Status
+var _effective_average_urgency: float = NAN
 var _camaraderie: Camaraderie
 var _other: Other
 
@@ -37,6 +39,9 @@ var needs: Needs:
 
 var status: Status:
 	get: return _status
+
+var effective_average_urgency: float:
+	get: return _effective_average_urgency
 
 var camaraderie: Camaraderie:
 	get: return _camaraderie
@@ -79,13 +84,35 @@ func initialize(
 	_other = Other.new()
 
 func apply_game_tick_effects(assigned_job: Job) -> void:
-	var need_keys = NeedFields.get_keys()
-	for need in need_keys:
-		var location_modifier: float = _synthesize_location_modifier(need, assigned_job)
-		#modifiers are given in hour granularity, normalize by GAME_TICKS_PER_IN_GAME_HOUR for correct numbers per tick
-		var total_modifiers = _normalize_per_hour_modifier(DECAY_RATES[need] + location_modifier)
-		
-		_needs[need] += total_modifiers
+	# TODO (refactor sprint): Move need and stress effect implementations out of
+	# Rat; keep this method as the public entry point for a rat's tick.
+	var net_rates_per_hour: Dictionary[String, float] = _apply_need_tick_effects(assigned_job)
+	_effective_average_urgency = URGENCIES.get_effective_average_urgency(_needs, net_rates_per_hour)
+	_apply_stress_tick_effects(assigned_job)
+
+func _apply_need_tick_effects(assigned_job: Job) -> Dictionary[String, float]:
+	var net_rates_per_hour: Dictionary[String, float] = {}
+
+	for need in NeedFields.get_keys():
+		var net_rate_per_hour: float = DECAY_RATES[need] + _synthesize_location_modifier(need, assigned_job)
+		net_rates_per_hour[need] = net_rate_per_hour
+		_needs[need] += _normalize_per_hour_modifier(net_rate_per_hour)
+
+	return net_rates_per_hour
+
+func _apply_stress_tick_effects(assigned_job: Job) -> void:
+	_status.stress += StressEvaluator.calculate_tick_stress_change(
+		_effective_average_urgency,
+		is_working_assigned_job(assigned_job)
+	)
+
+func is_working_assigned_job(assigned_job: Job) -> bool:
+	return (
+		assigned_job != null
+		and _current_location != null
+		and _current_location in assigned_job.locations
+		and other.state == RatConstants.STATE.WORKING
+	)
 
 func _synthesize_location_modifier(need: String, assigned_job: Job) -> float:
 	if _current_location == null:
@@ -95,7 +122,7 @@ func _synthesize_location_modifier(need: String, assigned_job: Job) -> float:
 	#modifiers are given in hour granularity, normalize by GAME_TICKS_PER_IN_GAME_HOUR for correct numbers per tick
 	var modifier = location_modifiers[need]
 	#apply employment modifiers if rat has job, rat is at job and rat is working
-	if assigned_job != null && _current_location in assigned_job.locations && other.state == RatConstants.STATE.WORKING:
+	if is_working_assigned_job(assigned_job):
 		modifier += assigned_job.modifiers[need] if assigned_job.modifiers[need] != null else 0
 	
 	return modifier

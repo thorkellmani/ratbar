@@ -7,6 +7,11 @@ var _rat: Rat
 
 
 @onready var _job_manager: JobManager = get_parent().get_node("JobManager")
+@onready var _stress_readout: Label = $Scroller/Panel/StressReadout
+@onready var _average_urgency_label: Label = $Scroller/Panel/StressBreakdown/Details/AverageUrgency
+@onready var _need_tier_label: Label = $Scroller/Panel/StressBreakdown/Details/NeedTier
+@onready var _working_rate_label: Label = $Scroller/Panel/StressBreakdown/Details/WorkingRate
+@onready var _net_rate_label: Label = $Scroller/Panel/StressBreakdown/Details/NetRate
 
 # Dictionary mapping stat keys to their corresponding LineEdit inputs.
 var actions := {
@@ -90,9 +95,40 @@ func _initialize() -> void:
 
 
 func _update() -> void:
+	_stress_readout.text = "Rat %d stress: %.2f / %.0f" % [
+		_rat.id,
+		_rat.status.stress,
+		_rat.status._get_max(),
+	]
+	if is_nan(_rat.effective_average_urgency):
+		_average_urgency_label.text = "Average urgency: --"
+		_need_tier_label.text = "Need tier: --"
+		_working_rate_label.text = "Working: --"
+		_net_rate_label.text = "Net stress rate: --"
+	else:
+		var average: float = _rat.effective_average_urgency
+		var tier: StressTier = StressEvaluator.get_stress_tier(average)
+		var job: Job = _job_manager.get_assigned_job(_rat)
+		var is_working: bool = _rat.is_working_assigned_job(job)
+
+		_average_urgency_label.text = "Average urgency: %.3f" % average
+		_need_tier_label.text = "Need tier: %s (%s)" % [
+			tier.label,
+			_format_hourly_rate(tier.stress_change_per_game_hour),
+		]
+		_working_rate_label.text = "Working: %s" % _format_hourly_rate(
+			StressEvaluator.get_work_rate_per_game_hour(is_working)
+		)
+		_net_rate_label.text = "Net stress rate: %s" % _format_hourly_rate(
+			StressEvaluator.get_stress_rate_per_game_hour(average, is_working)
+		)
+
 	for child in $Scroller/Panel.get_children():
 		if child is DebugPanelGroup:
 			child.update()
+
+func _format_hourly_rate(rate: float) -> String:
+	return ("+" if rate > 0.0 else "") + ("%.0f/h" % rate)
 
 func _connect_signals() -> void:
 	_rat.needs.stat_changed.connect(_update)

@@ -22,4 +22,7 @@ Utility-AI decision scoring for "which location should this rat go to."
 - `NeedUrgencies` / `NeedUrgency` — per-need `Curve` resources mapping a raw
   need value to a normalized `0..1` urgency. All five curves are authored in
   `need_urgencies.tres` (`nutrition`, `energy`, `social`, `stimulation`,
-  `vice_satisfaction`), and `NeedsEvaluator` now reads all five.
+  `vice_satisfaction`), and `NeedsEvaluator` now reads all five. `NeedUrgencies`
+  also calculates the stress-specific effective average urgency, sampling an
+  improving need at its maximum value without changing its stored need or
+  location-choice urgency.
