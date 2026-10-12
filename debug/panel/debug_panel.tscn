@@ -1,9 +1,14 @@
-[gd_scene load_steps=2 format=3 uid="uid://diubbu3d51vsp"]
+[gd_scene load_steps=7 format=3 uid="uid://diubbu3d51vsp"]
 
-[ext_resource type="Script" uid="uid://hktebjtq7alh" path="res://debug/panel/debug_panel.gd" id="1_426e4"]
+[ext_resource type="Script" path="res://debug/panel/debug_panel.gd" id="1_panel"]
+[ext_resource type="PackedScene" path="res://debug/panel_group/panel_group.tscn" id="2_group"]
+[ext_resource type="PackedScene" path="res://debug/stress_breakdown/stress_breakdown.tscn" id="3_stress"]
+[ext_resource type="PackedScene" path="res://debug/job_assignment/job_assignment.tscn" id="4_jobs"]
+[ext_resource type="Script" path="res://debug/panel/pause_button.gd" id="5_pause"]
+[ext_resource type="Script" path="res://debug/panel/time_button.gd" id="6_time"]
 
 [node name="DebugUI" type="CanvasLayer"]
-script = ExtResource("1_426e4")
+script = ExtResource("1_panel")
 
 [node name="Scroller" type="ScrollContainer" parent="."]
 anchors_preset = -1
@@ -17,30 +22,44 @@ horizontal_scroll_mode = 0
 layout_mode = 2
 mouse_filter = 2
 
-[node name="StressReadout" type="Label" parent="Scroller/Panel"]
+[node name="RatReadout" type="Label" parent="Scroller/Panel"]
 layout_mode = 2
-text = "Stress: --"
+text = "Stress: --\nAssigned job: Unassigned"
 
-[node name="StressBreakdown" type="FoldableContainer" parent="Scroller/Panel"]
-layout_mode = 2
-title = "Stress breakdown"
-folded = true
+[node name="StressBreakdown" parent="Scroller/Panel" instance=ExtResource("3_stress")]
 
-[node name="Details" type="VBoxContainer" parent="Scroller/Panel/StressBreakdown"]
+[node name="Personality" parent="Scroller/Panel" instance=ExtResource("2_group")]
+title = "Personality"
+
+[node name="Needs" parent="Scroller/Panel" instance=ExtResource("2_group")]
+title = "Needs"
+
+[node name="Statuses" parent="Scroller/Panel" instance=ExtResource("2_group")]
+title = "Statuses"
+
+[node name="Miscellaneous" parent="Scroller/Panel" instance=ExtResource("2_group")]
+title = "Miscellaneous"
+
+[node name="JobAssignment" parent="Scroller/Panel" instance=ExtResource("4_jobs")]
+
+[node name="EditFeedback" type="Label" parent="Scroller/Panel"]
+visible = false
 layout_mode = 2
 
-[node name="AverageUrgency" type="Label" parent="Scroller/Panel/StressBreakdown/Details"]
+[node name="DiscardEdits" type="Button" parent="Scroller/Panel"]
 layout_mode = 2
-text = "Average urgency: --"
+text = "Discard edits"
 
-[node name="NeedTier" type="Label" parent="Scroller/Panel/StressBreakdown/Details"]
+[node name="GenerateRat" type="Button" parent="Scroller/Panel"]
 layout_mode = 2
-text = "Need tier: --"
+text = "Generate Rat"
 
-[node name="WorkingRate" type="Label" parent="Scroller/Panel/StressBreakdown/Details"]
+[node name="TimeButton" type="Button" parent="Scroller/Panel"]
 layout_mode = 2
-text = "Working: --"
+text = "Time: 1.0x"
+script = ExtResource("6_time")
 
-[node name="NetRate" type="Label" parent="Scroller/Panel/StressBreakdown/Details"]
+[node name="PauseButton" type="Button" parent="Scroller/Panel"]
 layout_mode = 2
-text = "Net stress rate: --"
+text = "⏸"
+script = ExtResource("5_pause")

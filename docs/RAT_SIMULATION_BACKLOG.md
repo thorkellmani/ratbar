@@ -5,14 +5,14 @@ Godot has no automated test runner — verification is done by running the scene
 
 ## References
 
-- **Dave Mark, *Behavioral Mathematics for Game AI*** — the utility-AI framework `NeedsEvaluator` is built on: considerations (independently-scored factors, e.g. need urgency) run through response curves (shaping how a raw input like a mood stat maps to a normalized score), then combined into a single decision score. The core rule this design leans on repeatedly: every consideration must be normalized to a common scale *before* being combined, or one axis's raw units will dominate/get drowned out regardless of its actual relative importance. Dave Mark's later "Infinite Axis Utility System" talks extend this to independently-normalized axes multiplied together — the model behind splitting `Location.modifiers` (physical per-hour rate) from the planned `Location.pull` (normalized decision-scoring signal); see section 6.1.
-- **"Smart object advertising" (The Sims)** — the broader pattern `NeedsEvaluator`/`Location` already implement: objects/locations broadcast ("advertise") how well they satisfy each need, and an agent scans available ads and picks based on its own current urgencies, rather than the decision logic hardcoding which location to prefer.
+- **Dave Mark, *Behavioral Mathematics for Game AI*** — the utility-AI framework `LocationChoice` is built on: considerations (independently-scored factors, e.g. need urgency) run through response curves (shaping how a raw input like a mood stat maps to a normalized score), then combined into a single decision score. The core rule this design leans on repeatedly: every consideration must be normalized to a common scale *before* being combined, or one axis's raw units will dominate/get drowned out regardless of its actual relative importance. Dave Mark's later "Infinite Axis Utility System" talks extend this to independently-normalized axes multiplied together — the model behind splitting `Location.modifiers` (physical per-hour rate) from the planned `Location.pull` (normalized decision-scoring signal); see section 6.1.
+- **"Smart object advertising" (The Sims)** — the broader pattern `LocationChoice`/`Location` already implement: objects/locations broadcast ("advertise") how well they satisfy each need, and an agent scans available ads and picks based on its own current urgencies, rather than the decision logic hardcoding which location to prefer.
 
 ## 0. Debug Suite
 
 ### 0.1 Rat inspector overlay
-- [x] Clicking a rat in the scene opens a debug panel showing all internal stats in real time
-- [x] Panel updates each tick (no manual refresh needed)
+- [x] Clicking a rat opens the overlay with captured state, prepared stress breakdown, assigned job, and location title
+- [x] Panel refreshes from settled state and assignment events; unfinished edits remain in a private draft
 - [x] Panel displays:
   - [x] greed
   - [x] temper
@@ -33,23 +33,59 @@ Godot has no automated test runner — verification is done by running the scene
   - [ ] addiction per vice
   - [x] crisis
   - [x] assigned_job
-  - [x] job_skills per job
-- [x] Clicking another rat switches the panel to that rat; clicking the same rat closes it
+  - [ ] job_skills per job (future data model)
+- [x] Clicking another rat switches selection and discards unfinished edits; clicking the same rat preserves its draft
 
-**Test:** Run the scene. Click a rat. Panel appears with readable stat values that update live. Change a stat via a cheat input or direct GDScript — panel reflects the change immediately. Click a second rat — panel switches. Click empty space or same rat — panel closes.
+**Test:** Select two rats in turn; each shows its own values, stress, assigned job, and location title. Accepted changes refresh the selected rat; edits to one rat leave the other unchanged. Same-rat selection preserves the draft. **Confirmed by the maintainer on 2026-10-12.**
 
 ### 0.2 Rat stat override (cheat input)
-- [x] LineEdit `text_submitted` signal connected for each stat row
-- [x] On submission, look up which stat the LineEdit belongs to (accessor + enum key)
-- [x] Write new value back to the rat via the appropriate update function
-- [x] Clamp submitted value to the valid range for that stat before writing
+- [x] First `text_changed` edit pauses and creates a private deep-copied panel draft
+- [x] Typing edits only the draft through bound field paths; Enter does not submit
+- [x] Play validates input, submits the complete draft through managers for immediate Rat acceptance, then resumes
+- [x] Valid out-of-range stats clamp through their existing bounds; invalid/rejected drafts remain paused
+- [x] Discard restores accepted values and permits recovery without resuming
 
-**Test:** Set `stress` to 100 via the Statuses override input and confirm the readout updates and the value clamps at 100. Set `nutrition` to -80 and confirm need decay and action selection respond. Crisis entry remains future work in section 4.6.
+**Test:** Edit multiple fields while paused; Enter does not submit. Play accepts before resuming; the next tick uses those values. Invalid text blocks Play with feedback. Discard restores accepted values and remains paused. Stress clamps to `0..100`; needs and owner relationship clamp to `-100..100`. **Confirmed on 2026-10-12.** Gameplay crisis entry remains future work in section 4.6.
 
 ### 0.3 Simulation speed control
-- [x] A debug control allows time-scaling the simulation (0.5×, 1×, 2×, 5×, 10×) so decay and stress tests can be verified in a reasonable amount of real time
+- [x] A debug control allows time-scaling the simulation (0.5×, 1×, 5×, 10×) so decay and stress tests can be verified in a reasonable amount of real time
+- [x] DebugController owns selected running speed and pause state; scene-authored buttons emit requests and display its confirmed values
+- [x] Speed selection while paused changes the resume speed without unpausing
 
 **Test:** Set time scale to 10×. One in-game shift should complete in roughly 1/10th of normal wall-clock time. Stats (nutrition, energy, stress) should decay at the same in-game rate as normal speed — just faster in real time.
+
+---
+
+### 0.4 Rat Ownership and Debug Reliability — Completed
+
+Closed on **2026-10-12** after maintainer visual confirmation and recorded
+headless contract/integration checks.
+
+- [x] Simplify stat classes and introduce shared `NeedValues` and unconstrained `NeedRates` before continuing tick integration.
+- [x] Remove `Other`/`OtherFields`, move their fields to the agreed owners, migrate callers, and organize `rat.gd` into named regions.
+- [x] Use one travel state and idle-on-arrival behavior with manager requests to start work; reconsider stationary activity when assignments change.
+- [x] Add the rat's snapshot and update interface.
+- [x] Move need and stress coordination into `RatManager`, group calculation scripts under `entities/rat/systems/`, update resource references, and remove the rat's tick methods.
+- [x] Keep reconsideration on `Rat`, using manager-supplied context and detached evaluator inputs.
+- [x] Separate the debug controller from the panel and route edits through managers to the rat's update interface.
+- [x] Replace sibling-node lookups with scene unique manager references, including the debug controller when introduced.
+- [x] Add private paused edit drafts, Play submission, input validation, and Discard edits.
+- [x] Centralize simulation speed and pause state and connect both buttons to it.
+- [x] Verify behavior and update architecture documentation and the concept log.
+
+**Results:** independent owned RatState Resources and native snapshots; narrow
+validated tick drafts; static need/stress calculations; changed-only settled
+notifications; ID-based manager queries/events; idle arrival with separate work
+requests; scene-authored reusable debug components; Miscellaneous grouping;
+assigned-job/location-title readouts; private paused drafts and immediate Play
+acceptance; synchronized pause/speed controls.
+
+**Verification:** visual checklist confirmed for now by the maintainer. Structural,
+baseline calculation, scene component, and relocated-manager checks passed.
+Existing environment/shutdown messages remain. See the
+[closeout and retrospective](sprints/06-rat-ownership-and-debug-reliability.md),
+[visual checklist](06-VISUAL-TEST-CHECKLIST.md), and
+[historical decisions](sprints/06-rat-ownership-decisions.md).
 
 ---
 
@@ -120,23 +156,23 @@ Establishes the simulation's own clock, independent of Godot's per-frame `_proce
 
 ### 2.3 Centralized dispatch (no per-rat timers)
 - [x] `RatManager` is the only listener of `GameClock.tick` — individual rats do not each subscribe to the clock
-- [x] Each rat is assigned a slot at generation — weighted-random across 15 slots (`pick_weighted_random`, biased toward less-occupied slots), not deterministic `rat.id % NUM_SLOTS`, to avoid id-ordered clumping. 15 slots ÷ 60 ticks/hour = 4 decisions/hour/rat.
-- [x] On each tick, `RatManager` calls `rat.reevaluate_needs(...)` only for rats whose slot matches `tick_count % 15`
+- [x] Each rat is assigned a slot at generation — weighted-random across 15 slots (`pick_weighted_random`, biased toward less-occupied slots), not deterministic rat ID modulo NUM_SLOTS, to avoid id-ordered clumping. 15 slots ÷ 60 ticks/hour = 4 decisions/hour/rat.
+- [x] On each tick, `RatManager` calls `rat.request_destination_choice(...)` only for rats whose slot matches `tick_count % 15`
 - [x] Remove `Rat`'s own `DecisionPeriod` Timer and `_on_decision_period_timeout()` entirely
 
-**Test:** Generate N rats. Log which rat IDs get `reevaluate_needs` called on each tick over several ticks — confirm each rat's calls land only on ticks matching its assigned slot, and that removing the old Timer didn't leave decision-making dead (rats still eventually re-evaluate). ✅ Confirmed with multiple rats (distinguished via random `modulate` color), staggered rather than lockstep.
+**Test:** Generate N rats. Log which rat IDs get `request_destination_choice` called on each tick over several ticks — confirm each rat's calls land only on ticks matching its assigned slot, and that removing the old Timer didn't leave decision-making dead (rats still eventually re-evaluate). ✅ Confirmed with multiple rats (distinguished via random `modulate` color), staggered rather than lockstep.
 
 ### 2.4 Need application, decoupled from decision cadence
-- [x] On every tick, `RatManager` calls `rat.apply_game_tick_effects()` for every rat.
+- [x] On every tick, RatManager obtains each rat's narrow update draft, runs NeedSystem then StressSystem, and requests Rat acceptance. Rat has no tick entry point.
 - [x] Apply baseline decay during travel; while stationary at a location, add its per-hour modifiers. Add job modifiers only while working at an assigned job station.
 
 **Test:** Place a rat at the Pantry, stationary: nutrition rises every tick. During travel, all needs continue baseline decay, with no location or job effect. ✅ Confirmed in the Need Decay sprint.
 
 ### 2.5 `Rat` location tracking
-- [x] Add `current_location: Location` to `Rat`, set whenever a new `destination` is chosen
-- [x] Unlike `destination` (cleared on arrival), `current_location` persists after arrival — it's what 2.4's need application reads
+- [x] RatState stores current-location and destination StringName IDs; LocationManager resolves scene nodes when context is needed
+- [x] During travel the current location is empty; arrival records the reached ID, clears the destination, and defaults to idle before manager-requested work
 
-**Test:** Move a rat to a destination and let it arrive. Confirm `destination` is cleared but `current_location` still points at the location the rat is standing at. ✅ Confirmed.
+**Test:** Arrival clears destination ID, records current-location ID, and settles idle. The manager requests work only at a current assigned station; assignment changes reconsider stationary work. **Confirmed on 2026-10-12.**
 
 ---
 
@@ -167,13 +203,13 @@ Establishes the simulation's own clock, independent of Godot's per-frame `_proce
 | `.48` to below `.58` | `+6` |
 | `.58` and above | `+12` |
 
-**System placement:** Stress logic lives under `systems/stress/` as a stateless script, with provisional tiers in an Inspector-editable `StressTuning` Resource. `RatManager` calls `Rat.apply_game_tick_effects()` once per rat per tick; that public method applies need effects, then stress effects. The crowded `Rat` class has an explicit TODO to move effect implementations out during the refactor sprint while retaining this public entry point.
+**System placement:** `StressSystem` lives under `entities/rat/systems/stress/` as a stateless script, with provisional tiers in an Inspector-editable `StressTuning` Resource. Each tick, `RatManager` coordinates NeedSystem and StressSystem through their `apply_tick_effects()` functions using a detached `RatStateUpdateDraft`; the rat validates and applies the result, emitting `state_changed` only when live values change. The maintainer confirmed the refactor's visual checklist on 2026-10-12; see the [sprint closeout](sprints/06-rat-ownership-and-debug-reliability.md).
 
 **Work pressure:** Performing an assigned job at one of its stations adds a provisional flat `+3` stress per game-hour to the need-tier rate. Merely holding a job or travelling to work adds none; this avoids rewarding repeated unassignment after shifts. The rate is applied after selecting the need tier and stored stress stays within `0..100`.
 
 **Completed test findings:** With nutrition at `-80`, the other needs at `+50`, and no job, average urgency was about `.509` before Pantry and `.321` while nutrition improved there; stress changed `60 → 60.10 → 60.05` over two ticks. Several depleted needs selected `+12/h`; all needs at `+100` selected `-6/h`. Active work added `+3/h`, travel added none, and stress clamped to `0..100`. The debug panel shows stress to two decimals and a collapsible breakdown of average urgency, need tier, work rate, and net rate. The maintainer confirmed the visual test. The displayed `Slow recovery -1/h` plus working `+3/h` yielded net `+2/h` in play.
 
-**Later considerations:** Tune tier thresholds and rates through play. Integrate `temper` and `owner_relationship` when those stats have wider gameplay roles; vice relief and breaking-point crises also remain future work. Move need and stress effect implementations out of `Rat` in the refactor sprint while keeping its public tick entry point.
+**Later considerations:** Tune tier thresholds and rates through play. Integrate `temper` and `owner_relationship` when those stats have wider gameplay roles; vice relief and breaking-point crises also remain future work.
 
 ### 4.1 Need-driven stress accumulation
 - [x] Use effective average urgency to select a tiered stress-gain rate every tick.
@@ -483,9 +519,16 @@ Note: the "tag values" this section describes are `Location.pull` (a hand-author
 
 ## Deferred / Out of Scope for Now
 
+- **Per-field debug breakdowns — next sprint candidate:** offer an optional foldout beside each input. Move stress details to the stress row; add each need's decay, location/job effects, and net change per game-hour. Rows offer details only when available. Settle layout/data contracts before writing sprint tasks; the separate need-rate-label proposal is superseded.
+- **Reusable Movement component:** consider a child Node for speed, destination tracking, frame movement, and arrival signaling; Rat retains state ownership and request acceptance. NeedSystem/StressSystem remain static utilities.
+- **Main-mediated clock routing:** review the game-loop/update-time contract before replacing the existing GameClock-to-RatManager connection.
+- **Shared bounds/clamping:** revisit ownership and API for repeated ranges; current setters remain authoritative.
+- **Snapshot allocation:** profile representative colony sizes before introducing buffer reuse.
+- **Existing shutdown leaks:** investigate the ObjectDB/two-resource exit messages separately when prioritized.
+
 - **Signal bus / event bus** — needed eventually for push events (fight challenges, organizer broadcasts, owner pressure spikes). Core action selection uses smart-object polling instead; signal bus is for interrupts and rare event-driven behaviors only.
 
-- Pathfinding (currently teleporting — known placeholder)
+- Pathfinding (current travel uses straight-line frame movement)
 - Rat economy / currency system (design TBD)
 - Full UI for owner-facing stats
 - Art/animations for crisises and environmental tells

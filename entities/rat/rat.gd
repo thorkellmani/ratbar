@@ -2,160 +2,317 @@ extends Area2D
 
 class_name Rat
 
+
+#region State
+
 signal rat_clicked(rat: Rat)
+signal state_changed
+signal arrived_at_location(rat: Rat)
 
-const DEFAULT_VALUES := preload("res://entities/rat/generation_defaults/generation_defaults.tres")
-const DECAY_RATES := preload("res://entities/rat/stats/need/decay_rate/need_decay_rate.tres")
-const URGENCIES := preload("res://entities/rat/needs_evaluator/urgencies/need_urgencies.tres")
+@export var _state: RatState
 
-#region Local variables
-var id: int
-
-var _title: String
-var _needs: Needs
-var _personality: Personality
-var _status: Status
-var _effective_average_urgency: float = NAN
-var _camaraderie: Camaraderie
-var _other: Other
-
-
-var _locked_need: String
-var _current_location: Location
 var _destination: Location
 
-#TODO LATER
-#var last_nutrition_source: int = -1
-#var last_stimulation_source: int = -1
-#var last_social_activity: int = -1
-#var last_social_partner_id: int = -1
-#endregion
-
-var personality: Personality:
-	get: return _personality
-
-var needs: Needs:
-	get: return _needs
-
-var status: Status:
-	get: return _status
-
-var effective_average_urgency: float:
-	get: return _effective_average_urgency
-
-var camaraderie: Camaraderie:
-	get: return _camaraderie
-
-var other: Other:
-	get: return _other
+const MIN_OWNER_RELATIONSHIP: float = -100.0
+const MAX_OWNER_RELATIONSHIP: float = 100.0
 
 #endregion
 
-func _process(delta: float) -> void:
-	match other.state:
-		RatConstants.STATE.PROCEEDING_TO_WORK, RatConstants.STATE.PROCEEDING_TO_LOCATION:
-			global_position = global_position.move_toward(_destination.global_position, 400 * delta)
-			if global_position == _destination.global_position:
-				_arrive_at_destination()
+
+#region Initialization
+
+const DEFAULT_VALUES := preload(
+	"res://entities/rat/config/generation/generation_defaults.tres"
+)
+
+
+func initialize(idx: int) -> void:
+	_state = RatState.new()
+	_state.rat_id = idx
+	_state.title = "Rat " + str(idx)
+
+	_state.personality = Personality.new()
+	_state.personality.greed = _randomize_personality_trait("greed")
+	_state.personality.temper = _randomize_personality_trait("temper")
+	_state.personality.socialness = _randomize_personality_trait("socialness")
+	_state.personality.ambition = _randomize_personality_trait("ambition")
+	_state.personality.laziness = _randomize_personality_trait("laziness")
+
+	_state.status = DEFAULT_VALUES.default_status.duplicate(true) as Status
+	_state.needs = DEFAULT_VALUES.default_needs.duplicate(true) as Needs
+	_state.camaraderie = Camaraderie.new()
+
+
+func _ready() -> void:
+	$Label.text = _state.title
+	$ColorRect.modulate = Color.from_hsv(randf(), 0.8, 0.9)
 
 
 func _randomize_personality_trait(personality_trait: String) -> float:
 	return randfn(DEFAULT_VALUES.personality_mean.get(personality_trait), DEFAULT_VALUES.personality_deviation.get(personality_trait))
 
-func initialize(
-	idx: int,
+#endregion
+
+
+#region State capture
+
+func get_id() -> int:
+	return _state.rat_id
+
+
+## Returns an independent copy of the rat's current state.
+func get_state_snapshot() -> RatState:
+	return _state.duplicate(true) as RatState
+
+
+## Returns independent working values for preparing a rat state update.
+func get_state_update_draft() -> RatStateUpdateDraft:
+	return RatStateUpdateDraft.new(
+		_state.rat_id,
+		_state.needs,
+		_state.status.stress,
+		_state.effective_average_urgency
+	)
+
+#endregion
+
+
+#region Requests and updates
+
+## Validates the draft before applying any changes to the rat.
+## Accepted drafts may leave the rat unchanged.
+func request_state_update(draft: RatStateUpdateDraft) -> Error:
+	if draft == null:
+		push_error(
+			"Rat %d rejected a missing update draft." % _state.rat_id
+		)
+		return ERR_INVALID_PARAMETER
+
+	if draft.rat_id != _state.rat_id:
+		push_error(
+			"Rat %d rejected an update draft for rat %d."
+			% [_state.rat_id, draft.rat_id]
+		)
+		return ERR_INVALID_PARAMETER
+
+	var validation_error: Error = draft.validate()
+	if validation_error != OK:
+		return validation_error
+
+	_process_state_change(_apply_state_update_draft.bind(draft))
+	return OK
+
+
+func _apply_state_update_draft(draft: RatStateUpdateDraft) -> bool:
+	var changed: bool = false
+
+	for need in NeedValues.get_keys():
+		if _state.needs[need] != draft.needs[need]:
+			_state.needs[need] = draft.needs[need]
+			changed = true
+
+	var bounded_stress: float = clampf(
+		draft.stress,
+		Status.MIN_STATUS_VALUE,
+		Status.MAX_STATUS_VALUE
+	)
+
+	if _state.status.stress != bounded_stress:
+		_state.status.stress = bounded_stress
+		changed = true
+
+	if _state.effective_average_urgency != draft.effective_average_urgency:
+		_state.effective_average_urgency = draft.effective_average_urgency
+		changed = true
+
+	return changed
+
+
+## Validates a complete proposed state before accepting an owned copy.
+func request_state_replacement(proposed_state: RatState) -> Error:
+	if proposed_state == null:
+		push_error(
+			"Rat %d rejected a missing proposed state." % _state.rat_id
+		)
+		return ERR_INVALID_PARAMETER
+
+	if proposed_state.rat_id != _state.rat_id:
+		push_error(
+			"Rat %d rejected a proposed state for rat %d."
+			% [_state.rat_id, proposed_state.rat_id]
+		)
+		return ERR_INVALID_PARAMETER
+
+	var validation_error: Error = proposed_state.validate()
+	if validation_error != OK:
+		return validation_error
+
+	_process_state_change(_apply_state_replacement.bind(proposed_state))
+	return OK
+
+
+func _apply_state_replacement(proposed_state: RatState) -> bool:
+	var accepted_state: RatState = proposed_state.duplicate(true) as RatState
+	accepted_state.owner_relationship = clampf(
+		accepted_state.owner_relationship,
+		MIN_OWNER_RELATIONSHIP,
+		MAX_OWNER_RELATIONSHIP
+	)
+
+	for other_rat_id in accepted_state.camaraderie.camaraderie:
+		accepted_state.camaraderie.add_relationship(
+			other_rat_id,
+			accepted_state.camaraderie.camaraderie[other_rat_id]
+		)
+
+	if _state.is_equal_to(accepted_state):
+		return false
+
+	_state = accepted_state
+	$Label.text = _state.title
+	return true
+
+
+## Runs a complete state operation and announces any resulting change.
+func _process_state_change(apply_change: Callable) -> bool:
+	var changed: bool = apply_change.call()
+
+	if changed:
+		state_changed.emit()
+
+	return changed
+
+#endregion
+
+
+#region Decisions
+
+## Chooses from the manager's scoring options and handles the destination.
+func request_destination_choice(
+	locations: Array[Location],
+	options: Array[LocationChoiceOption]
 ) -> void:
-	#could be optimized if needed
-	id = idx
-	_title = "Rat " + str(id)
-	$Label.text = _title
-	$ColorRect.modulate = Color.from_hsv(randf(), 0.8, 0.9)
+	_process_state_change(_choose_destination.bind(locations, options))
 
-	_personality = Personality.new()
-	_personality.greed = _randomize_personality_trait("greed")
-	_personality.temper = _randomize_personality_trait("temper")
-	_personality.socialness = _randomize_personality_trait("socialness")
-	_personality.ambition = _randomize_personality_trait("ambition")
-	_personality.laziness = _randomize_personality_trait("laziness")
 
-	_status = DEFAULT_VALUES.default_status.duplicate()
-	_needs = DEFAULT_VALUES.default_needs.duplicate()
-	_camaraderie = Camaraderie.new()
-	_other = Other.new()
+func _choose_destination(
+	locations: Array[Location],
+	options: Array[LocationChoiceOption]
+) -> bool:
+	var copied_needs: Needs = _state.needs.duplicate(true) as Needs
+	var urgencies: NeedUrgencyValues = (
+		NeedSystem.calculate_need_urgencies(copied_needs)
+	)
+	var chosen_index: int = LocationChoice.choose_destination_index(
+		urgencies,
+		options
+	)
+	var intended_location: Location = null
 
-func apply_game_tick_effects(assigned_job: Job) -> void:
-	# TODO (refactor sprint): Move need and stress effect implementations out of
-	# Rat; keep this method as the public entry point for a rat's tick.
-	var net_rates_per_hour: Dictionary[String, float] = _apply_need_tick_effects(assigned_job)
-	_effective_average_urgency = URGENCIES.get_effective_average_urgency(_needs, net_rates_per_hour)
-	_apply_stress_tick_effects(assigned_job)
+	if chosen_index >= 0:
+		intended_location = locations[chosen_index]
 
-func _apply_need_tick_effects(assigned_job: Job) -> Dictionary[String, float]:
-	var net_rates_per_hour: Dictionary[String, float] = {}
+	return _apply_destination_choice(intended_location)
 
-	for need in NeedFields.get_keys():
-		var net_rate_per_hour: float = DECAY_RATES[need] + _synthesize_location_modifier(need, assigned_job)
-		net_rates_per_hour[need] = net_rate_per_hour
-		_needs[need] += _normalize_per_hour_modifier(net_rate_per_hour)
 
-	return net_rates_per_hour
-
-func _apply_stress_tick_effects(assigned_job: Job) -> void:
-	_status.stress += StressEvaluator.calculate_tick_stress_change(
-		_effective_average_urgency,
-		is_working_assigned_job(assigned_job)
+func _apply_destination_choice(intended_location: Location) -> bool:
+	var intended_location_id: StringName = (
+		intended_location.location_id if intended_location != null else &""
 	)
 
-func is_working_assigned_job(assigned_job: Job) -> bool:
-	return (
-		assigned_job != null
-		and _current_location != null
-		and _current_location in assigned_job.locations
-		and other.state == RatConstants.STATE.WORKING
+	if intended_location_id == _state.current_location_id:
+		return false
+
+	var proposed_state: RatState = get_state_snapshot()
+	proposed_state.destination_id = intended_location_id
+
+	if intended_location != null:
+		proposed_state.current_location_id = &""
+		proposed_state.activity_state = RatConstants.STATE.TRAVELLING
+	else:
+		proposed_state.activity_state = RatConstants.STATE.IDLE
+
+	_destination = intended_location
+	return _apply_state_replacement(proposed_state)
+
+#endregion
+
+
+#region Movement
+
+func _process(delta: float) -> void:
+	if _state.activity_state == RatConstants.STATE.TRAVELLING:
+		_travel_to_destination(delta)
+
+
+## Moves toward the destination and handles arrival when it is reached.
+func _travel_to_destination(delta: float) -> void:
+	global_position = global_position.move_toward(
+		_destination.global_position,
+		400 * delta
 	)
 
-func _synthesize_location_modifier(need: String, assigned_job: Job) -> float:
-	if _current_location == null:
-		return 0.0
+	if global_position == _destination.global_position:
+		_arrive_at_destination()
 
-	var location_modifiers: LocationModifiers = _current_location.modifiers
-	#modifiers are given in hour granularity, normalize by GAME_TICKS_PER_IN_GAME_HOUR for correct numbers per tick
-	var modifier = location_modifiers[need]
-	#apply employment modifiers if rat has job, rat is at job and rat is working
-	if is_working_assigned_job(assigned_job):
-		modifier += assigned_job.modifiers[need] if assigned_job.modifiers[need] != null else 0
-	
-	return modifier
 
-func _normalize_per_hour_modifier(modifier: float) -> float:
-	return modifier / GameConstants.GAME_TICKS_PER_IN_GAME_HOUR
+## Finishes travelling and defaults to idle.
+## Announces arrival after the location and activity are updated.
+func _arrive_at_destination() -> void:
+	_process_state_change(_record_arrival)
+	arrived_at_location.emit(self)
+
+
+func _record_arrival() -> bool:
+	var proposed_state: RatState = get_state_snapshot()
+	proposed_state.current_location_id = proposed_state.destination_id
+	proposed_state.destination_id = &""
+	proposed_state.activity_state = RatConstants.STATE.IDLE
+	_destination = null
+	return _apply_state_replacement(proposed_state)
+
+#endregion
+
+
+#region Work
+
+## Requests that the rat start working at its current location.
+## The manager checks employment eligibility before making this request.
+func request_start_work() -> bool:
+	return _process_state_change(_start_work)
+
+
+func _start_work() -> bool:
+	if _state.activity_state != RatConstants.STATE.IDLE:
+		return false
+
+	if _state.current_location_id == &"":
+		return false
+
+	_state.activity_state = RatConstants.STATE.WORKING
+	return true
+
+
+## Stops working and returns to idle.
+## Does nothing if the rat is already idle or travelling.
+func request_stop_work() -> void:
+	_process_state_change(_stop_work)
+
+
+func _stop_work() -> bool:
+	if _state.activity_state != RatConstants.STATE.WORKING:
+		return false
+
+	_state.activity_state = RatConstants.STATE.IDLE
+	return true
+
+#endregion
+
+
+#region Input
 
 func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		rat_clicked.emit(self)
 
-func reevaluate_needs(job: Job, locations: Array[Location]) -> void:
-	var intended_location: Location = NeedsEvaluator.evaluate(self, job, locations)
-	if intended_location == _current_location:
-		print("Same destination selected")
-		return
-		
-	_destination = intended_location
-	print(_destination.title if _destination else "No destination")
-	if _destination:
-		_start_travelling(job)
-	if not _destination:
-		other.state = RatConstants.STATE.IDLE
-		
-func _start_travelling(job: Job) -> void:
-	_current_location = null
-	other.state = RatConstants.STATE.PROCEEDING_TO_WORK if job != null && _destination in job.locations else RatConstants.STATE.PROCEEDING_TO_LOCATION
-		
-func _arrive_at_destination() -> void:
-	if  other.state == RatConstants.STATE.PROCEEDING_TO_WORK:
-		other.state = RatConstants.STATE.WORKING
-	else:
-		other.state = RatConstants.STATE.IDLE
-
-	_current_location = _destination
-	_destination = null
+#endregion

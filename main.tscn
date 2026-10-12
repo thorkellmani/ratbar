@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=3 uid="uid://dxpm20igoillm"]
+[gd_scene load_steps=31 format=3 uid="uid://dxpm20igoillm"]
 
 [ext_resource type="PackedScene" uid="uid://bgh42503avk7q" path="res://kitchen.tscn" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://dn2bwf5drxhim" path="res://main.gd" id="1_lquwl"]
@@ -14,6 +14,7 @@
 [ext_resource type="Script" uid="uid://bmokapa5tkgtl" path="res://config/game_clock.gd" id="10_4c57u"]
 [ext_resource type="Resource" uid="uid://du8k2qy5nybw8" path="res://entities/location/res/stove_pull_defaults.tres" id="10_dg77c"]
 [ext_resource type="Script" uid="uid://d1dgj1rs2fdji" path="res://entities/location/location_pull.gd" id="10_efxa6"]
+[ext_resource type="Script" path="res://debug/controller/debug_controller.gd" id="17_debug_controller"]
 
 [sub_resource type="Resource" id="Resource_yaehf"]
 script = ExtResource("5_w48qg")
@@ -139,6 +140,7 @@ visible = false
 position = Vector2(449, 225)
 
 [node name="JobManager" type="Node2D" parent="."]
+unique_name_in_owner = true
 script = ExtResource("4_1bvp3")
 
 [node name="HeadChef" type="Node2D" parent="JobManager" node_paths=PackedStringArray("locations")]
@@ -177,6 +179,7 @@ locations = [NodePath("../../LocationManager/Counter 2")]
 metadata/_custom_type_script = "uid://dxrya62xwiptx"
 
 [node name="RatManager" type="Node2D" parent="."]
+unique_name_in_owner = true
 script = ExtResource("6_7mycd")
 
 [node name="RatGenerateMarker" type="Marker2D" parent="RatManager"]
@@ -186,9 +189,11 @@ position = Vector2(510, 522)
 layer = -1
 
 [node name="DebugUI" parent="." instance=ExtResource("6_272bh")]
+unique_name_in_owner = true
 visible = false
 
 [node name="LocationManager" type="Node2D" parent="."]
+unique_name_in_owner = true
 script = ExtResource("7_272bh")
 
 [node name="Stove 1" type="Marker2D" parent="LocationManager"]
@@ -196,6 +201,7 @@ position = Vector2(568, 269)
 script = ExtResource("8_kek77")
 modifiers = SubResource("Resource_vivmo")
 title = "Stove 1"
+location_id = &"stove_1"
 pull = ExtResource("10_dg77c")
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
@@ -204,6 +210,7 @@ position = Vector2(920, 441)
 script = ExtResource("8_kek77")
 modifiers = SubResource("Resource_dg77c")
 title = "Stove 2"
+location_id = &"stove_2"
 pull = ExtResource("10_dg77c")
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
@@ -212,6 +219,7 @@ position = Vector2(324, 273)
 script = ExtResource("8_kek77")
 modifiers = SubResource("Resource_ryguw")
 title = "Counter 1"
+location_id = &"counter_1"
 pull = SubResource("Resource_074og")
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
@@ -220,6 +228,7 @@ position = Vector2(803, 273)
 script = ExtResource("8_kek77")
 modifiers = SubResource("Resource_ycdy4")
 title = "Basin"
+location_id = &"basin"
 pull = SubResource("Resource_cegan")
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
@@ -228,6 +237,7 @@ position = Vector2(382, 442)
 script = ExtResource("8_kek77")
 modifiers = SubResource("Resource_w48qg")
 title = "Counter 2"
+location_id = &"counter_2"
 pull = SubResource("Resource_82xsv")
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
@@ -236,6 +246,7 @@ position = Vector2(1036, 277)
 script = ExtResource("8_kek77")
 modifiers = SubResource("Resource_efxa6")
 title = "Pantry"
+location_id = &"pantry"
 pull = SubResource("Resource_getpj")
 metadata/_custom_type_script = "uid://c6cwtu6kw7u3d"
 
@@ -244,6 +255,9 @@ script = ExtResource("10_4c57u")
 
 [node name="TickTimer" type="Timer" parent="GameClock"]
 autostart = true
+
+[node name="DebugController" type="Node" parent="."]
+script = ExtResource("17_debug_controller")
 
 [connection signal="tick" from="GameClock" to="RatManager" method="_on_game_clock_tick"]
 [connection signal="timeout" from="GameClock/TickTimer" to="GameClock" method="_on_tick_timer_timeout"]

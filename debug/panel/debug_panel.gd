@@ -1,156 +1,220 @@
-extends CanvasLayer
+## Displays captured rat state and owns the selected rat's edit draft.
+class_name DebugPanel extends CanvasLayer
 
-signal assign_job_requested(rat: Rat, job: Job)
+
+#region State
+
+signal assign_job_requested(job_index: int)
 signal generate_rat_requested
+signal play_requested
+signal running_speed_requested(speed: float)
+signal pause_requested
+signal discard_edits_requested
 
-var _rat: Rat
+var _displayed_state_snapshot: RatState
+var _edit_draft: RatState
 
+@onready var _personality_group: DebugPanelGroup = (
+	$Scroller/Panel/Personality
+)
+@onready var _needs_group: DebugPanelGroup = (
+	$Scroller/Panel/Needs
+)
+@onready var _statuses_group: DebugPanelGroup = (
+	$Scroller/Panel/Statuses
+)
+@onready var _miscellaneous_group: DebugPanelGroup = (
+	$Scroller/Panel/Miscellaneous
+)
+@onready var _attribute_groups: Array[DebugPanelGroup] = [
+	_personality_group,
+	_needs_group,
+	_statuses_group,
+	_miscellaneous_group,
+]
 
-@onready var _job_manager: JobManager = get_parent().get_node("JobManager")
-@onready var _stress_readout: Label = $Scroller/Panel/StressReadout
-@onready var _average_urgency_label: Label = $Scroller/Panel/StressBreakdown/Details/AverageUrgency
-@onready var _need_tier_label: Label = $Scroller/Panel/StressBreakdown/Details/NeedTier
-@onready var _working_rate_label: Label = $Scroller/Panel/StressBreakdown/Details/WorkingRate
-@onready var _net_rate_label: Label = $Scroller/Panel/StressBreakdown/Details/NetRate
+@onready var _stress_readout: Label = $Scroller/Panel/RatReadout
+@onready var _stress_breakdown: DebugStressBreakdown = (
+	$Scroller/Panel/StressBreakdown
+)
+@onready var _job_assignment: DebugJobAssignment = (
+	$Scroller/Panel/JobAssignment
+)
+@onready var _edit_error_label: Label = $Scroller/Panel/EditFeedback
+@onready var _discard_edits_button: Button = $Scroller/Panel/DiscardEdits
+@onready var _generate_rat_button: Button = $Scroller/Panel/GenerateRat
+@onready var _pause_button: PauseButton = $Scroller/Panel/PauseButton
+@onready var _time_button: TimeButton = $Scroller/Panel/TimeButton
 
-# Dictionary mapping stat keys to their corresponding LineEdit inputs.
-var actions := {
-	"GENERATE_RAT": {
-		"label": "Generate Rat",
-		"signal": generate_rat_requested,
-	},
-}
-# _rat of the moment of invocation, not initalization
-var debug_panel_structure: Dictionary[String, Callable] = {
-	"Personality": func():
-		var result := {}
-		for stat_name in Personality.get_keys():
-			result[stat_name] = {
-				"get": func(): return _rat.personality.get(stat_name),
-				"set": func(value): _rat.personality.set(stat_name, value),
-			}
-		return result,
-	"Needs": func():
-		var result := {}
-		for stat_name in Needs.get_keys():
-			result[stat_name] = {
-				"get": func(): return _rat.needs.get(stat_name),
-				"set": func(value): _rat.needs.set(stat_name, value),
-			}
-		return result,
-	"Statuses": func():
-		var result := {}
-		for stat_name in Status.get_keys():
-			result[stat_name] = {
-				"get": func(): return _rat.status.get(stat_name),
-				"set": func(value): _rat.status.set(stat_name, value),
-			}
-		return result,
-	"Other": func():
-		var result := {}
-		for key in Other.get_keys():
-			result[key] = {
-				"get": func(): return _rat.other.get(key),
-				"set": func(value): _rat.other.set(key, value)
-			}
-		return result
-}
-
-func generate_button(label: String, callback: Callable) -> Button:
-	var button: Button = Button.new()
-	button.text = label
-	button.pressed.connect(callback)
-	return button
+#endregion
 
 
-func _initialize() -> void:
-	for group_name in debug_panel_structure:
-		var rat_stat_group = debug_panel_structure[group_name].call()
-		var debug_panel_group: DebugPanelGroup = DebugPanelGroup.new()
-		debug_panel_group.title = group_name
-		$Scroller/Panel.add_child(debug_panel_group)
+#region Initialization
 
-		for stat_name in rat_stat_group:
-			var group_functions: Dictionary = rat_stat_group[stat_name]
-			debug_panel_group.add_child_row(stat_name, group_functions["get"], group_functions["set"])
+func _ready() -> void:
+	_bind_rat_field_groups()
 
-	#assign job
-	var assign_job_panel_group = FoldableContainer.new()
-	var job_vbox = VBoxContainer.new()
+	for group in _attribute_groups:
+		group.edit_requested.connect(_begin_edit_draft)
 
-	assign_job_panel_group.title = "Assign Jobs"
-	$Scroller/Panel.add_child(assign_job_panel_group)
-	assign_job_panel_group.add_child(job_vbox)
-	assign_job_panel_group.folded = true
-	
-	for job in _job_manager.get_jobs():
-		job_vbox.add_child(generate_button(job.title, func(): assign_job_requested.emit(_rat, job)))
-	job_vbox.add_child(generate_button("Unassign", func(): assign_job_requested.emit(_rat, null)))
-	
-	for action in actions:
-		$Scroller/Panel.add_child(generate_button(actions[action].label, func(): actions[action].signal.emit()))
-	$Scroller/Panel.add_child(TimeButton.new())
-	$Scroller/Panel.add_child(PauseButton.new())
+	_job_assignment.assign_job_requested.connect(
+		assign_job_requested.emit
+	)
+	_discard_edits_button.pressed.connect(discard_edits_requested.emit)
+	_generate_rat_button.pressed.connect(generate_rat_requested.emit)
+	_pause_button.pause_requested.connect(pause_requested.emit)
+	_pause_button.play_requested.connect(play_requested.emit)
+	_time_button.running_speed_requested.connect(
+		running_speed_requested.emit
+	)
 
 
+func _bind_rat_field_groups() -> void:
+	_bind_rat_field_group(
+		_personality_group, Personality.get_keys(), "personality"
+	)
+	_bind_rat_field_group(
+		_needs_group, Needs.get_keys(), "needs"
+	)
+	_bind_rat_field_group(
+		_statuses_group, Status.get_keys(), "status"
+	)
+	_bind_rat_field_group(
+		_miscellaneous_group,
+		["owner_relationship", "currency", "crisis", "activity_state"]
+	)
 
-func _update() -> void:
-	_stress_readout.text = "Rat %d stress: %.2f / %.0f" % [
-		_rat.id,
-		_rat.status.stress,
-		_rat.status._get_max(),
-	]
-	if is_nan(_rat.effective_average_urgency):
-		_average_urgency_label.text = "Average urgency: --"
-		_need_tier_label.text = "Need tier: --"
-		_working_rate_label.text = "Working: --"
-		_net_rate_label.text = "Net stress rate: --"
-	else:
-		var average: float = _rat.effective_average_urgency
-		var tier: StressTier = StressEvaluator.get_stress_tier(average)
-		var job: Job = _job_manager.get_assigned_job(_rat)
-		var is_working: bool = _rat.is_working_assigned_job(job)
 
-		_average_urgency_label.text = "Average urgency: %.3f" % average
-		_need_tier_label.text = "Need tier: %s (%s)" % [
-			tier.label,
-			_format_hourly_rate(tier.stress_change_per_game_hour),
+func _bind_rat_field_group(
+	group: DebugPanelGroup,
+	field_names: Array[String],
+	property_prefix: String = ""
+) -> void:
+	group.configure_fields(
+		field_names,
+		_get_rat_attribute_value,
+		_update_edit_draft_value,
+		property_prefix
+	)
+
+#endregion
+
+
+#region Display
+
+func display_time_control_state(
+	is_paused: bool,
+	running_speed: float
+) -> void:
+	_pause_button.display_pause_state(is_paused)
+	_time_button.display_running_speed(running_speed)
+
+
+func display_available_jobs(job_titles: Array[String]) -> void:
+	_job_assignment.display_available_jobs(job_titles)
+
+
+func display_rat_debug_data(display_data: RatDebugDisplayData) -> void:
+	_displayed_state_snapshot = display_data.state_snapshot
+
+	var location_text: String = display_data.current_location_title
+	if location_text.is_empty():
+		location_text = (
+			"Travelling"
+			if _displayed_state_snapshot.activity_state
+			== RatConstants.STATE.TRAVELLING
+			else "None"
+		)
+
+	_stress_readout.text = (
+		"Rat %d stress: %.2f / %.0f\nAssigned job: %s\nLocation: %s"
+		% [
+			_displayed_state_snapshot.rat_id,
+			_displayed_state_snapshot.status.stress,
+			Status.MAX_STATUS_VALUE,
+			display_data.assigned_job_title,
+			location_text,
 		]
-		_working_rate_label.text = "Working: %s" % _format_hourly_rate(
-			StressEvaluator.get_work_rate_per_game_hour(is_working)
-		)
-		_net_rate_label.text = "Net stress rate: %s" % _format_hourly_rate(
-			StressEvaluator.get_stress_rate_per_game_hour(average, is_working)
-		)
+	)
 
-	for child in $Scroller/Panel.get_children():
-		if child is DebugPanelGroup:
-			child.update()
+	_update_rat_attribute_rows()
+	_stress_breakdown.display_stress_breakdown(display_data)
 
-func _format_hourly_rate(rate: float) -> String:
-	return ("+" if rate > 0.0 else "") + ("%.0f/h" % rate)
 
-func _connect_signals() -> void:
-	_rat.needs.stat_changed.connect(_update)
-	_rat.personality.stat_changed.connect(_update)
-	_rat.status.stat_changed.connect(_update)
-	_rat.other.stat_changed.connect(_update)
+func _update_rat_attribute_rows() -> void:
+	if _edit_draft != null:
+		return
 
-func _disconnect_signals() -> void:
-	_rat.needs.stat_changed.disconnect(_update)
-	_rat.personality.stat_changed.disconnect(_update)
-	_rat.status.stat_changed.disconnect(_update)
-	_rat.other.stat_changed.disconnect(_update)
+	for group in _attribute_groups:
+		group.update()
 
-func inspect_rat(rat: Rat) -> void:
-	if !_rat:
-		_rat = rat
-		_initialize()
+#endregion
 
-		visible = true
-	else:
-		_disconnect_signals()
-		_rat = rat
 
-	_connect_signals()
-	_update()
+#region Editing
+
+func _begin_edit_draft() -> void:
+	if _displayed_state_snapshot == null or _edit_draft != null:
+		return
+
+	pause_requested.emit()
+	_edit_draft = _displayed_state_snapshot.duplicate(true) as RatState
+
+
+func get_edit_draft() -> RatState:
+	return _edit_draft
+
+
+func discard_edit_draft() -> void:
+	_edit_draft = null
+	_edit_error_label.visible = false
+
+
+func validate_edit_inputs() -> bool:
+	_edit_error_label.visible = false
+	var invalid_row: DebugPanelStatRow = _get_invalid_edit_row()
+
+	if invalid_row == null:
+		return true
+
+	_edit_error_label.text = (
+		"Enter a valid number for '%s' before pressing Play."
+		% invalid_row.field_label.text
+	)
+	_edit_error_label.visible = true
+	invalid_row.field_value.grab_focus()
+	return false
+
+
+func _get_rat_attribute_value(property_path: NodePath) -> Variant:
+	var displayed_state: RatState = (
+		_edit_draft
+		if _edit_draft != null
+		else _displayed_state_snapshot
+	)
+
+	if displayed_state == null:
+		return null
+
+	return displayed_state.get_indexed(property_path)
+
+
+func _update_edit_draft_value(
+	value: float,
+	property_path: NodePath
+) -> void:
+	if _edit_draft == null:
+		return
+
+	_edit_draft.set_indexed(property_path, value)
+
+
+func _get_invalid_edit_row() -> DebugPanelStatRow:
+	for group in _attribute_groups:
+		var invalid_row: DebugPanelStatRow = group.get_invalid_edit_row()
+		if invalid_row != null:
+			return invalid_row
+
+	return null
+
+#endregion
