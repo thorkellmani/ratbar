@@ -22,7 +22,7 @@ behind it is implemented.
 
 - [ ] Working a job feels distinct from idling at the same location.
 - [ ] Reassigning a job's stations doesn't change how those stations behave for other rats.
-- [ ] Heading to work resolves differently on arrival than heading anywhere else.
+- [ ] Arrival at a current assigned station starts work; other arrivals leave the rat idle. Assignment changes during travel are respected.
 
 ## Deliberately not on this list yet
 

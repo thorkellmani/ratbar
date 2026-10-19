@@ -2,6 +2,11 @@
 
 This documents the research behind `NeedsEvaluator`'s combination formula — how multiple active need axes at one location get blended into a single score. The power mean is a design choice supported by useful mathematical properties and a recorded playtest, not a uniquely required solution. The corrections below distinguish those properties from earlier, overstated research conclusions.
 
+Implementation mapping after commit `f376ce5`: the former NeedsEvaluator is
+removed. `NeedSystem.calculate_need_urgencies()` samples copied needs, and
+`LocationChoice.choose_destination_index()` scores copied LocationChoiceOption
+values. Historical research and playtest references below retain the earlier name.
+
 ## The problem that started this
 
 A location can have several active need axes (e.g. Pantry: `nutrition`, `energy`). An equal-weight arithmetic mean gives each active axis the same marginal influence. Concrete example, assuming full appeal on both axes: a rat near-starving (`nutrition` urgency `≈1.0`) but well-rested (`energy` urgency `≈0.09`) at Pantry — the plain average blends these to `0.545`, diluting the starvation signal with an irrelevant one. A competing location with moderate values on all its active axes could beat it because averaging doesn't let one screaming need dominate.
@@ -75,7 +80,7 @@ Chosen over mellowmax because: our domain is always `0..1` (no negative inputs, 
 
 ## Implemented and verified
 
-`NeedsEvaluator.evaluate()` uses the equal-weight power mean of urgency × appeal (`SCORING_TUNING_CONSTANT = 3`), compensated-average code fully removed. The recorded live nutrition-slide test found that a rat assigned Head Chef held work over Pantry all the way to `nutrition = -45`, then Pantry overtook it at `-52` and held/widened the lead through `-72` — a working starvation crossover, which the old compensated-average formula never produced (work won even at full starvation, `-100`). `EMPLOYMENT_PRESSURE = 0.35` held up in that test; no re-tuning was needed there. This validates that tested configuration, not a universal guarantee that starvation wins for every location set, pull assignment, or employment-pressure value.
+`LocationChoice` now uses the equal-weight power mean of urgency × appeal (`SCORING_TUNING_CONSTANT = 3`), preserving the formula previously implemented in `NeedsEvaluator.evaluate()`. Compensated-average code remains removed. The recorded live nutrition-slide test found that a rat assigned Head Chef held work over Pantry all the way to `nutrition = -45`, then Pantry overtook it at `-52` and held/widened the lead through `-72` — a working starvation crossover, which the old compensated-average formula never produced (work won even at full starvation, `-100`). `EMPLOYMENT_PRESSURE = 0.35` held up in that test; no re-tuning was needed there. This validates that tested configuration, not a universal guarantee that starvation wins for every location set, pull assignment, or employment-pressure value.
 
 One known, real limitation surfaced during this verification pass — not a bug, a mathematical property of the formula:
 
@@ -89,6 +94,6 @@ This is a central semantic tradeoff: the score measures the strength of a locati
 
 ## Honesty on confidence
 
-The characterization and reinforcement-learning claims above now link their sources and state the scope of those results. The derivative, bounds, and worked examples can be checked directly from the formula. The implementation description was checked against `needs_evaluator.gd`, `location_pull.gd`, and `base_stat_group.gd`; the playtest results remain historical observations, not a new test run.
+The characterization and reinforcement-learning claims above link their sources and state the scope of those results. The derivative, bounds, and worked examples can be checked directly from the formula. The implementation mapping was checked against `entities/rat/systems/decisions/location_choice.gd`, `entities/rat/systems/needs/need_system.gd`, and `entities/location/location_pull.gd`; the playtest results remain historical observations, not a new test run. External research was not reverified during this documentation update.
 
 The earlier research's IAUS, bucketing, LSP, and welfare-economics summaries are background claims, not independently reverified by this correction. They do not establish that the selected formula is necessary or best for Ratbar. In particular, negligible axis-count effects cannot be assumed from the small number of needs: the two-axis example already shows a substantial effect. The defensible conclusion is that the power mean is a simple, tunable candidate whose behavioral tradeoffs must remain explicit.

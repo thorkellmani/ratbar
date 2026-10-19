@@ -1,6 +1,6 @@
 # Stress From Felt Needs — Decision Log
 
-Historical decisions from the completed stress baseline sprint. Results and follow-ups are in the [backlog](../RAT_SIMULATION_BACKLOG.md#4-stress-system).
+Historical decisions from the completed stress baseline sprint. Follow-ups are in the [backlog](../RAT_SIMULATION_BACKLOG.md#stress-vice-and-crisis); results remain in this historical record.
 
 - Use the rat's urgency curves to model its current feeling. For stress, an improving need is sampled at full satisfaction; stored need values and location-choice urgency stay unchanged.
 - Average all five stress-specific urgency samples. Select a provisional hourly rate from the Inspector-editable `StressTuning` tiers and apply it every game tick.

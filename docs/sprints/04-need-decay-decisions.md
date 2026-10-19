@@ -1,6 +1,6 @@
 # Need Decay — Decision Log
 
-Historical decisions from the completed Need Decay sprint. Superseded proposals stay visible with strikethrough. The outcome and follow-ups are in the [backlog](../RAT_SIMULATION_BACKLOG.md#3-need-decay--completed).
+Historical decisions from the completed Need Decay sprint. Superseded proposals stay visible with strikethrough. Follow-ups are in the [backlog](../RAT_SIMULATION_BACKLOG.md#behavior-and-tuning); the decisions below preserve the sprint outcome.
 
 - ~~Give selected needs special baseline rules: faster energy decay while working, social decay based on `socialness`, and vice decay based on stress or addiction.~~ All five needs use the same flat-decay mechanism, with independently configurable rates starting at `-5` per game-hour. Job and location modifiers carry state-dependent effects.
 - ~~Decay stimulation only during repetitive or unstimulating activity.~~ Stimulation uses flat baseline decay. Repetition is a separate, later feature.

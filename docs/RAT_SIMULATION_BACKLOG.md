@@ -1,536 +1,91 @@
-# Rat Simulation — Implementation TODO
-
-Each task is broken into atomic parts. Each part has a verification test.
-Godot has no automated test runner — verification is done by running the scene and observing the described outcome.
-
-## References
-
-- **Dave Mark, *Behavioral Mathematics for Game AI*** — the utility-AI framework `LocationChoice` is built on: considerations (independently-scored factors, e.g. need urgency) run through response curves (shaping how a raw input like a mood stat maps to a normalized score), then combined into a single decision score. The core rule this design leans on repeatedly: every consideration must be normalized to a common scale *before* being combined, or one axis's raw units will dominate/get drowned out regardless of its actual relative importance. Dave Mark's later "Infinite Axis Utility System" talks extend this to independently-normalized axes multiplied together — the model behind splitting `Location.modifiers` (physical per-hour rate) from the planned `Location.pull` (normalized decision-scoring signal); see section 6.1.
-- **"Smart object advertising" (The Sims)** — the broader pattern `LocationChoice`/`Location` already implement: objects/locations broadcast ("advertise") how well they satisfy each need, and an agent scans available ads and picks based on its own current urgencies, rather than the decision logic hardcoding which location to prefer.
-
-## 0. Debug Suite
-
-### 0.1 Rat inspector overlay
-- [x] Clicking a rat opens the overlay with captured state, prepared stress breakdown, assigned job, and location title
-- [x] Panel refreshes from settled state and assignment events; unfinished edits remain in a private draft
-- [x] Panel displays:
-  - [x] greed
-  - [x] temper
-  - [x] socialness
-  - [x] ambition
-  - [x] laziness
-  - [x] nutrition
-  - [x] energy
-  - [x] stimulation
-  - [x] social
-  - [x] vice_satisfaction
-  - [x] stress
-  - [x] health
-  - [x] inebriation
-  - [x] radicalization
-  - [x] extra_stress
-  - [x] owner_relationship
-  - [ ] addiction per vice
-  - [x] crisis
-  - [x] assigned_job
-  - [ ] job_skills per job (future data model)
-- [x] Clicking another rat switches selection and discards unfinished edits; clicking the same rat preserves its draft
-
-**Test:** Select two rats in turn; each shows its own values, stress, assigned job, and location title. Accepted changes refresh the selected rat; edits to one rat leave the other unchanged. Same-rat selection preserves the draft. **Confirmed by the maintainer on 2026-10-12.**
-
-### 0.2 Rat stat override (cheat input)
-- [x] First `text_changed` edit pauses and creates a private deep-copied panel draft
-- [x] Typing edits only the draft through bound field paths; Enter does not submit
-- [x] Play validates input, submits the complete draft through managers for immediate Rat acceptance, then resumes
-- [x] Valid out-of-range stats clamp through their existing bounds; invalid/rejected drafts remain paused
-- [x] Discard restores accepted values and permits recovery without resuming
-
-**Test:** Edit multiple fields while paused; Enter does not submit. Play accepts before resuming; the next tick uses those values. Invalid text blocks Play with feedback. Discard restores accepted values and remains paused. Stress clamps to `0..100`; needs and owner relationship clamp to `-100..100`. **Confirmed on 2026-10-12.** Gameplay crisis entry remains future work in section 4.6.
-
-### 0.3 Simulation speed control
-- [x] A debug control allows time-scaling the simulation (0.5×, 1×, 5×, 10×) so decay and stress tests can be verified in a reasonable amount of real time
-- [x] DebugController owns selected running speed and pause state; scene-authored buttons emit requests and display its confirmed values
-- [x] Speed selection while paused changes the resume speed without unpausing
-
-**Test:** Set time scale to 10×. One in-game shift should complete in roughly 1/10th of normal wall-clock time. Stats (nutrition, energy, stress) should decay at the same in-game rate as normal speed — just faster in real time.
-
----
-
-### 0.4 Rat Ownership and Debug Reliability — Completed
-
-Closed on **2026-10-12** after maintainer visual confirmation and recorded
-headless contract/integration checks.
-
-- [x] Simplify stat classes and introduce shared `NeedValues` and unconstrained `NeedRates` before continuing tick integration.
-- [x] Remove `Other`/`OtherFields`, move their fields to the agreed owners, migrate callers, and organize `rat.gd` into named regions.
-- [x] Use one travel state and idle-on-arrival behavior with manager requests to start work; reconsider stationary activity when assignments change.
-- [x] Add the rat's snapshot and update interface.
-- [x] Move need and stress coordination into `RatManager`, group calculation scripts under `entities/rat/systems/`, update resource references, and remove the rat's tick methods.
-- [x] Keep reconsideration on `Rat`, using manager-supplied context and detached evaluator inputs.
-- [x] Separate the debug controller from the panel and route edits through managers to the rat's update interface.
-- [x] Replace sibling-node lookups with scene unique manager references, including the debug controller when introduced.
-- [x] Add private paused edit drafts, Play submission, input validation, and Discard edits.
-- [x] Centralize simulation speed and pause state and connect both buttons to it.
-- [x] Verify behavior and update architecture documentation and the concept log.
-
-**Results:** independent owned RatState Resources and native snapshots; narrow
-validated tick drafts; static need/stress calculations; changed-only settled
-notifications; ID-based manager queries/events; idle arrival with separate work
-requests; scene-authored reusable debug components; Miscellaneous grouping;
-assigned-job/location-title readouts; private paused drafts and immediate Play
-acceptance; synchronized pause/speed controls.
-
-**Verification:** visual checklist confirmed for now by the maintainer. Structural,
-baseline calculation, scene component, and relocated-manager checks passed.
-Existing environment/shutdown messages remain. See the
-[closeout and retrospective](sprints/06-rat-ownership-and-debug-reliability.md),
-[visual checklist](06-VISUAL-TEST-CHECKLIST.md), and
-[historical decisions](sprints/06-rat-ownership-decisions.md).
-
----
-
-## 1. Rat Data Model
-
-### 1.1 Personality stats
-- [x] Add five personality fields to `Rat`: `greed`, `temper`, `socialness`, `ambition`, `laziness` (int, -100 to 100)
-- [x] Randomise on `_ready()` using default bias from the design doc (greed +40, temper +10, socialness +60, ambition -20, laziness +20)
-
-**Test:** Print all five stats for a freshly generated rat. Confirm they are within -100/100 and cluster around their intended defaults across 10 generated rats.
-
-### 1.2 Need stats
-- [x] Add five need fields: `nutrition`, `energy`, `stimulation`, `social`, `vice_satisfaction` (float, -100 to 100, default 0)
-
-**Test:** Inspect a rat immediately after generation. All five needs read 0.
-
-### 1.3 Status stats
-- [x] Add: `stress` (0–100), `health` (0–100, default 100), `inebriation` (0–100), `owner_relationship` (-100 to 100), `radicalization` (0–100), `extra_stress` (0–100), `currency` (float, ≥ 0)
-
-**Test:** New rat has stress=0, health=100, inebriation=0, owner_relationship=0, radicalization=0, extra_stress=0.
-
-### 1.4 Job skills dictionary
-- [x] Add `job_skills: Dictionary[Constants.JOB, float]` (0–10 per job)
-- [ ] Populate on generation with a random roll seeded by personality fit
-  - [ ] High ambition → higher head cook and line cook rolls
-  - [ ] High socialness → higher bartender rolls
-
-**Test:** Generate 20 rats. High-ambition rats (ambition > 50) should average higher cook skill than low-ambition rats (ambition < -50). Print comparison.
-
-### 1.5 Vice weighting
-- [x] Per-vice addiction is tracked via `RatVice`'s own fields (`smoking`/`drinking`/`drugs`/`sex`/`gambling`/`fighting`, 0–100 each) — no separate `addiction` dictionary needed, and no separate `primary_vice` identity field; generation elevates one `RatVice` field directly instead
-- [ ] Generation-time vice elevation should be weighted by personality — currently a uniform random pick (see vice generation logic)
-
-**Test:** Generate 20 rats. High-temper rats should have `fighting`/`drugs` elevated at generation more often than low-temper rats. Print vice distribution grouped by temper.
-
-### 1.6 Camaraderie
-- [ ] Add `camaraderie: Dictionary[int, float]` (rat_id → -100 to 100)
-- [ ] First meeting seeds value near 0 with slight positive bias (+5 to +15)
-
-**Test:** Create two rats. Trigger a first-meeting between them. Both rats' camaraderie dictionaries contain the other's ID with a value between +5 and +15.
-
-### 1.7 Fulfillment history
-- [ ] Add per-need last-source tracking:
-  - [ ] `last_nutrition_source`
-  - [ ] `last_stimulation_source`
-  - [ ] `last_social_activity`
-  - [ ] `last_social_partner_id`
-
-**Test:** After a rat eats at a specific food location, `last_nutrition_source` is set to that location's ID.
-
----
-
-## 2. Time & Tick Architecture
-
-Establishes the simulation's own clock, independent of Godot's per-frame `_process()` and independent of any individual rat's own timing. Everything downstream (need decay, stress accumulation, action selection cadence) is denominated against this, not against wall-clock time directly. See [Sprint 2](sprints/02-game-time.md) for its design history.
-
-### 2.1 Game-time convention
-- [x] Adopt and document: 1 game-hour = 60 real seconds at 1x `Engine.time_scale`. `SECONDS_PER_GAME_TICK = 1.0`, `GAME_TICKS_PER_IN_GAME_HOUR = 60`.
-
-**Test:** With `Engine.time_scale = 1.0`, confirm a 16-game-hour shift takes 16 real minutes to elapse, measured against `GameClock`'s own tick count, not a stopwatch. ✅ Confirmed, including 10x `time_scale` scaling proportionally.
-
-### 2.2 `GameClock`
-- [x] New `Node` under `Main` (not an autoload — it's stateful runtime behavior, not shared static data) with a `Timer` child, `wait_time = SECONDS_PER_GAME_TICK`
-- [x] `GAME_TICKS_PER_IN_GAME_HOUR = 60` derived from 2.1's convention
-- [x] Emits a single `tick(tick_count: int)` signal
-
-**Test:** Subscribe a temporary print statement to `tick`. Confirm it fires at the expected real-time interval, and that `tick_count` increments by exactly 1 each time (no skipped or duplicate ticks). ✅ Confirmed.
-
-### 2.3 Centralized dispatch (no per-rat timers)
-- [x] `RatManager` is the only listener of `GameClock.tick` — individual rats do not each subscribe to the clock
-- [x] Each rat is assigned a slot at generation — weighted-random across 15 slots (`pick_weighted_random`, biased toward less-occupied slots), not deterministic rat ID modulo NUM_SLOTS, to avoid id-ordered clumping. 15 slots ÷ 60 ticks/hour = 4 decisions/hour/rat.
-- [x] On each tick, `RatManager` calls `rat.request_destination_choice(...)` only for rats whose slot matches `tick_count % 15`
-- [x] Remove `Rat`'s own `DecisionPeriod` Timer and `_on_decision_period_timeout()` entirely
-
-**Test:** Generate N rats. Log which rat IDs get `request_destination_choice` called on each tick over several ticks — confirm each rat's calls land only on ticks matching its assigned slot, and that removing the old Timer didn't leave decision-making dead (rats still eventually re-evaluate). ✅ Confirmed with multiple rats (distinguished via random `modulate` color), staggered rather than lockstep.
-
-### 2.4 Need application, decoupled from decision cadence
-- [x] On every tick, RatManager obtains each rat's narrow update draft, runs NeedSystem then StressSystem, and requests Rat acceptance. Rat has no tick entry point.
-- [x] Apply baseline decay during travel; while stationary at a location, add its per-hour modifiers. Add job modifiers only while working at an assigned job station.
-
-**Test:** Place a rat at the Pantry, stationary: nutrition rises every tick. During travel, all needs continue baseline decay, with no location or job effect. ✅ Confirmed in the Need Decay sprint.
-
-### 2.5 `Rat` location tracking
-- [x] RatState stores current-location and destination StringName IDs; LocationManager resolves scene nodes when context is needed
-- [x] During travel the current location is empty; arrival records the reached ID, clears the destination, and defaults to idle before manager-requested work
-
-**Test:** Arrival clears destination ID, records current-location ID, and settles idle. The manager requests work only at a current assigned station; assignment changes reconsider stationary work. **Confirmed on 2026-10-12.**
-
----
-
-## 3. Need Decay — Completed
-
-- [x] Apply flat, independently configurable baseline decay to nutrition, energy, stimulation, social, and vice satisfaction. Each starts at `-5` per game-hour in `need_decay_rate.tres`. Decay continues during travel; location and job modifiers offset it while applicable.
-  **Test:** With no location effect, all five needs fall at their configured rates while idle and traveling. At the Pantry, its `+20` nutrition modifier overcomes the `-5` baseline, and Pantry overtakes Head Chef around `nutrition = -52`. ✅ Confirmed.
-
-**Findings:** The observed Pantry crossover stayed around `-52`. Modifier values remain first-pass tuning. A proposed primary-need lock was deferred because a chosen location can have positive appeal for a need while its net effect still lowers that need. See the [decision log](sprints/04-need-decay-decisions.md).
-
-**Later considerations:** Observe whether scheduled decisions cause flicker before designing switching behavior. Define stopping conditions with each need's fulfillment activity, and define a fulfillment event before adding history or repetition penalties. Revisit stress-driven vice effects after stress exists. Tune decay and modifier values through play; add live controls or modifier isolation only when testing calls for them. Revisit owner-pressure spikes when relationship and stress costs can affect behavior.
-
----
-
-## 4. Stress System
-
-**Need-driven baseline completed:** A need value describes its condition; its urgency curve describes how strongly the rat wants that need addressed. Stress reflects how the rat feels over time, rather than raw need values alone. For stress calculation only, sample a need's urgency at full satisfaction (`+100`) while its **net change is positive** after baseline decay and applicable location and job effects; otherwise sample its current value. Average the five samples. The stored need and location-choice scoring remain unchanged. For example, Pantry nutrition rises by `+15` per game-hour (`+20` location, `-5` baseline) and qualifies; a location with positive `pull` but a falling need does not. The two thermometers discussed during design were an analogy, not two independent stats. `Rat` caches only the derived effective average urgency for the stress tick and debug display; the rate tier is calculated from that average on demand. Bad periods raise stress faster than good periods lower it; stress may affect bodily functions later. See the [stress decision log](sprints/05-stress-decisions.md) for design history.
-
-**Provisional stress tiers:** Applied to the effective average urgency above, in stress points per game-hour. These are starting values to tune against the running game.
-
-| Average urgency | Stress change |
-| --- | ---: |
-| Below `.28` | `-6` |
-| `.28` to below `.34` | `-3` |
-| `.34` to below `.38` | `-1` |
-| `.38` to below `.42` | `0` |
-| `.42` to below `.48` | `+2` |
-| `.48` to below `.58` | `+6` |
-| `.58` and above | `+12` |
-
-**System placement:** `StressSystem` lives under `entities/rat/systems/stress/` as a stateless script, with provisional tiers in an Inspector-editable `StressTuning` Resource. Each tick, `RatManager` coordinates NeedSystem and StressSystem through their `apply_tick_effects()` functions using a detached `RatStateUpdateDraft`; the rat validates and applies the result, emitting `state_changed` only when live values change. The maintainer confirmed the refactor's visual checklist on 2026-10-12; see the [sprint closeout](sprints/06-rat-ownership-and-debug-reliability.md).
-
-**Work pressure:** Performing an assigned job at one of its stations adds a provisional flat `+3` stress per game-hour to the need-tier rate. Merely holding a job or travelling to work adds none; this avoids rewarding repeated unassignment after shifts. The rate is applied after selecting the need tier and stored stress stays within `0..100`.
-
-**Completed test findings:** With nutrition at `-80`, the other needs at `+50`, and no job, average urgency was about `.509` before Pantry and `.321` while nutrition improved there; stress changed `60 → 60.10 → 60.05` over two ticks. Several depleted needs selected `+12/h`; all needs at `+100` selected `-6/h`. Active work added `+3/h`, travel added none, and stress clamped to `0..100`. The debug panel shows stress to two decimals and a collapsible breakdown of average urgency, need tier, work rate, and net rate. The maintainer confirmed the visual test. The displayed `Slow recovery -1/h` plus working `+3/h` yielded net `+2/h` in play.
-
-**Later considerations:** Tune tier thresholds and rates through play. Integrate `temper` and `owner_relationship` when those stats have wider gameplay roles; vice relief and breaking-point crises also remain future work.
-
-### 4.1 Need-driven stress accumulation
-- [x] Use effective average urgency to select a tiered stress-gain rate every tick.
-
-**Test:** With nutrition `-80`, other needs `+50`, no job, and stress `60`, the rat gains `.10` stress per tick before Pantry. At Pantry, nutrition improves and stress begins falling. ✅ Confirmed in simulation and visual testing.
-
-### 4.2 Temper multiplier (later)
-- [ ] High-`temper` rats accumulate stress faster from the same conditions
-
-**Test:** Two rats, identical unmet needs, temper=100 vs temper=-100. After 10 seconds, temper=100 rat has higher stress.
-
-### 4.3 Owner relationship effect on accumulation (later)
-- [ ] Low `owner_relationship` → faster stress accumulation
-
-**Test:** Same rat, same unmet needs, set owner_relationship=-80 vs owner_relationship=+80. -80 condition produces faster stress gain.
-
-### 4.4 Need-driven stress recovery
-- [x] Use effective average urgency to select a tiered stress-recovery rate every tick.
-
-**Test:** With all needs at `+100`, no active work, and stress `60`, stress falls `.10` per tick. At Pantry, the nutrition `-80` scenario's improving need changes the tier to `-3/h`, or `.05` recovery per tick. ✅ Confirmed in simulation and visual testing.
-
-### 4.5 Vice as stress relief
-- [ ] Using a vice is the fastest stress relief
-
-**Test:** Two stressed rats (stress=70). One uses vice, one does nothing. After the same time window, vice-user has lower stress.
-
-### 4.6 Breaking point roll
-- [ ] When stress hits 100, trigger a roll for crisis (burnout or rebellion)
-- [ ] High temper + low owner_relationship → skews toward rebellion
-- [ ] Prolonged overwork → skews toward burnout
-
-**Test:** Force stress to 100 on a rat with temper=100 and owner_relationship=-80. Run 10 trials. At least 6/10 should result in REBELLION. Force stress to 100 on an overworked rat with owner_relationship=+60. At least 6/10 should result in BURNOUT.
-
----
-
-## 5. Crisis
-
-### 5.1 Burnout entry and visibility
-- [ ] Enter BURNOUT state when breaking point roll resolves to burnout
-- [ ] Burnout should be visually obvious (animation or indicator)
-
-**Test:** Trigger burnout on a rat. Confirm the rat's `crisis` is BURNOUT. Confirm a visible change in the rat's appearance or animation.
-
-### 5.2 Burnout effects
-- [ ] Stress locked at 100 while in burnout
-- [ ] `vice_satisfaction` decays faster
-- [ ] `energy` decays faster
-- [ ] Job performance multiplier severely reduced
-
-**Test:** Rat in BURNOUT. Stress cannot be reduced below 100. Compare energy decay rate to same rat not in burnout: burnout rat decays meaningfully faster. Measure job performance output — burnout rat should be well below baseline.
-
-### 5.3 Extra stress in burnout
-- [ ] If owner assigns work to a burned-out rat, `extra_stress` increments
-- [ ] `extra_stress` at 100 kills the rat
-
-**Test:** Put a rat in BURNOUT. Assign it a job. Confirm `extra_stress` is incrementing. Force `extra_stress` to 100, confirm rat is removed from RATS dictionary and a colony-wide owner_relationship penalty is applied.
-
-### 5.4 Rebellion entry and concealment
-- [ ] Enter REBELLION when breaking point roll resolves to rebellion
-- [ ] Rat's `mood` signal is suppressed (rat appears fine externally)
-
-**Test:** Rat enters REBELLION. Its displayed mood reads neutral or positive despite internal stats. Internally, `crisis` is REBELLION.
-
-### 5.5 Organizer behavior
-- [ ] Rebellious rat continues working (so as not to flag)
-- [ ] Each tick, it broadcasts an organizer signal to nearby rats
-- [ ] Target rats' `radicalization` increments based on susceptibility
-
-**Test:** Place an organizer rat next to three target rats. After 30 seconds, all three target rats have `radicalization` > 0. Rats with high socialness/ambition/temper should gain more radicalization than low-stat rats.
-
-### 5.6 Radicalization escalation and environmental tells
-- [ ] As radicalization spreads, environmental tells appear in the scene (pamphlets, ribbons, propaganda objects)
-- [ ] Tells scale with average colony radicalization
-
-**Test:** Push average colony radicalization above 30. At least one environmental tell should appear in the scene. Push above 60 — tells should be unmistakable (multiple objects or a prominent indicator).
-
----
-
-## 6. Action Selection
-
-### 6.1 Location broadcasts
-Note: the "tag values" this section describes are `Location.pull` (a hand-authored, normalized `-5..+5` value per need — see the Location Pull sprint), not `Location.modifiers` (the physical per-hour rate consumed by `apply_stat_tick`, section 2.4/3.1b). The two were conflated into one field through the Game Time sprint; splitting them is this section's next step. See References above (Dave Mark) for why a shared normalized scale matters here.
-- [ ] Each location node emits a tag dictionary:
-  - [ ] `nutrition`
-  - [ ] `energy`
-  - [ ] `stimulation`
-  - [ ] `social`
-  - [ ] `vice_satisfaction`
-  - [ ] `stress`
-  - [ ] `health`
-  - [ ] `inebriation`
-  - [ ] `skill_progression`
-  - [ ] `employment_pressure`
-
-**Test:** Print all broadcast values from at least three different location types (food, job, vice). Confirm each has a non-zero value for at least the tags relevant to that location type.
-
-### 6.2 Personality modifier
-- [ ] Raw tag values are modified per rat based on personality stats before scoring
-- [ ] Lazy rats amplify rest/idle tags
-- [ ] Social rats amplify social tags
-- [ ] Ambitious rats amplify `employment_pressure` if `owner_relationship` is positive
-
-**Test:** Two rats: one laziness=100, one laziness=-100. Both evaluate the same idle location. Lazy rat assigns higher score to the idle location. Social rats should score social locations higher than anti-social rats.
-
-### 6.3 Adjacency modifier
-- [ ] When scoring a location, check who else is there
-- [ ] Apply camaraderie toward each adjacent rat as a modifier
-- [ ] Scale with evaluating rat's `socialness`
-
-**Test:** Two rats with camaraderie=80 toward each other. Social rat (socialness=80) should score the location higher when friend is present vs when a stranger is present. Anti-social rat (socialness=-80) should show less difference.
-
-### 6.4 Stress distortion
-- [ ] High stress boosts vice tags and suppresses work tags globally
-
-**Test:** Same rat, same locations. Stress=10 vs stress=80. At stress=80, the vice location score is higher and the job location score is lower compared to stress=10.
-
-### 6.5 Repetition penalty
-- [ ] If the rat uses the same need-satisfaction source consecutively, reduce that source's tag values
-
-**Test:** Rat eats at food_stall_A twice in a row. On the third evaluation, food_stall_A's nutrition tag value is reduced compared to the first visit. After eating at food_stall_B in between, the penalty on food_stall_A resets.
-
-### 6.6 Final score calculation and selection
-- [ ] Score = sum(need_urgency[n] × modified_tag_value[n]) + small random variance
-- [ ] Rat moves toward highest-scoring location
-
-**Test:** Force a rat to have nutrition=-80 (urgent hunger) and place a food source nearby. The rat should select the food location on the next tick. Print scores for all locations — food location score should be highest by a clear margin.
-
-### 6.6b Switching inertia
-- [ ] A rat only switches current action if the new top-scoring option exceeds the current score by a fixed threshold constant
-- [ ] Prevents jitter between two near-equal options without needing a timer
-
-**Test:** Set up two locations with nearly identical scores. Confirm the rat doesn't oscillate between them each tick. Widen the score gap past the threshold — confirm the rat switches cleanly.
-
-### 6.7 Employment pressure
-- [ ] Job locations always emit a base `employment_pressure` tag
-- [ ] Owner can spike employment_pressure (temporary boost to all job location scores)
-- [ ] Spike decays back to base; costs owner_relationship per rat
-
-**Test:** Set all rats to idle with moderate needs. Trigger an owner pressure spike. Confirm rats move toward job locations. 30 seconds after spike: owner_relationship of each rat should be slightly lower than before the spike.
-
----
-
-## 7. Job System
-
-### 7.1 Job slots and pods
-- [ ] Track how many rats are assigned to each job (fixed slots per the design doc)
-- [ ] Rats in the same job form a pod
-
-**Test:** Assign 4 rats to LINE_COOK (max 3). The fourth assignment should be rejected or queued. Print pod members — exactly 3 rats listed.
-
-### 7.2 Personality fit modifier
-- [ ] Calculate `personality_fit_modifier` per job per rat based on stat match
-
-**Test:** Create a high-ambition low-laziness rat and a high-laziness rat. Both do HEAD_COOK. High-ambition rat's personality_fit_modifier should be significantly higher.
-
-### 7.3 Job performance formula
-- [ ] `performance = job_skill × personality_fit_modifier × current_state_modifier`
-- [ ] `current_state_modifier` reduced by:
-  - [ ] Negative needs
-  - [ ] Stress
-  - [ ] Inebriation
-  - [ ] Low health
-  - [ ] Burnout
-
-**Test:** Same rat, max needs vs depleted needs. Performance should be measurably lower with depleted needs. Add stress=80 — performance drops further.
-
-### 7.4 Pod performance
-- [ ] `pod_performance` = average individual performance, modified by group dynamics
-- [ ] Inebriated pod-mates degrade the overall pod score
-
-**Test:** Pod of 3 rats, all performing at baseline. Add one rat with inebriation=80. Pod performance should decrease. Camaraderie=90 between two pod-mates should provide a small bonus relative to the same pod with camaraderie=0.
-
-### 7.5 Job skill progression
-- [ ] `job_skills[job]` increments slowly while rat is actively working that job
-- [ ] Skills never decay
-
-**Test:** Run a rat on the same job for a full shift. `job_skills[job]` at end of shift should be slightly higher than at start. Swap to a different job — original job skill does not change.
-
-### 7.6 Job variety requirement
-- [ ] Prolonged assignment to the same job adds a cumulative stress penalty (separate from other stress sources)
-
-**Test:** Keep a rat on the same job for 3 in-game shifts. Stress should be rising from the job variety penalty alone, even if all needs are met.
-
----
-
-## 8. Rat-to-Rat Interactions
-
-### 8.1 Social broadcasts
-- [ ] When a rat's `social` need is negative, it emits a social broadcast
-- [ ] Nearby rats score the broadcast in action selection
-
-**Test:** Rat A has social=-60. Rat B (socialness=80, camaraderie toward A = 60) is nearby. Rat B should move toward Rat A. Rat C (socialness=-80, camaraderie=0) should not be pulled toward Rat A.
-
-### 8.2 Camaraderie change over time
-- [ ] Neutral/good interactions increment camaraderie slightly
-- [ ] Bad interactions decrement camaraderie
-- [ ] Slow decay without interaction
-
-**Test:** Two rats interact positively 5 times. Camaraderie should be higher than starting value. Simulate 5 bad interactions — camaraderie should drop. Leave two rats without interaction for a full shift — camaraderie should decrease slightly.
-
-### 8.3 Conflict and fighting
-- [ ] If one rat has FIGHTING as their vice and camaraderie toward another rat is sufficiently negative, it may broadcast a fight
-- [ ] High-temper, low-stimulation, low-social recipient is more likely to accept
-
-**Test:** Set up: Rat A has fighting vice, camaraderie toward Rat B = -70. Rat B has temper=80, stimulation=-50. Run for 20 seconds. A fight should trigger. Confirm both rats' `health` decreases. Confirm camaraderie between them worsens further.
-
-### 8.4 Proximity effects
-- [ ] High-socialness rats increase social fulfillment for nearby rats during interaction
-- [ ] Low-socialness rats contribute less to others' fulfillment
-
-**Test:** Rat A (socialness=90) and Rat B (socialness=-90) each interact socially with Rat C. After the same interaction duration, Rat C's social need should be more fulfilled from the interaction with Rat A.
-
----
-
-## 9. Vice System
-
-### 9.1 Vice usage fulfills vice_satisfaction and increases addiction
-- [ ] Using a vice:
-  - [ ] Raises `vice_satisfaction`
-  - [ ] Decreases stress
-  - [ ] Increases that vice's own `RatVice` field (e.g. using smoking raises `vice.smoking` directly, not a lookup via `primary_vice`)
-- [ ] Inebriation-inducing vices (drinking, drugs) also raise `inebriation`
-
-**Test:** Rat uses a specific vice. Before/after: `vice_satisfaction` increases, `stress` decreases, that vice's own `RatVice` field increases. If vice is drinking/drugs, `inebriation` also increases.
-
-### 9.2 Addiction decay during abstinence
-- [ ] Each `RatVice` field decays over time without use, at vice-specific rates
-- [ ] Drugs decay very slowly, fighting decays moderately
-
-**Test:** Set a rat's `vice.drugs` to 50. Leave the rat without access for two full shifts — it should be lower. Run the same test for a faster-decaying vice (e.g. smoking) over the same period — smoking should decay more than drugs.
-
-### 9.3 Withholding vice raises stress and degrades owner_relationship
-- [ ] When a rat cannot access a vice it's addicted to (a high value on that `RatVice` field), `vice_satisfaction` drops below 0, which contributes to stress
-- [ ] Owner_relationship worsens proportional to deprivation duration
-
-**Test:** Rat with `vice.drugs` = 60. Remove access to drugs for one full shift. Confirm `vice_satisfaction` is negative, `stress` has increased, `owner_relationship` is lower than at shift start.
-
-### 9.4 Inebriation degrades job performance
-- [ ] `inebriation` is a negative factor in `current_state_modifier`
-
-**Test:** Rat at inebriation=0 vs inebriation=80. Same job, same needs, same stats otherwise. Inebriation=80 rat has measurably lower job performance.
-
-### 9.5 Smoking location affects food quality
-- [ ] Rat smoking near cooking location applies a `food_quality_penalty` flag to that location's output
-
-**Test:** Place a smoking rat adjacent to the cook station. Pod output from cook station should have a food_quality_penalty applied. Remove the smoking rat — penalty lifts.
-
----
-
-## 10. Owner Relationship
-
-### 10.1 Relationship increases from met needs
-- [ ] Each tick where the rat's needs are met and job fit is good, owner_relationship trends upward (slowly)
-
-**Test:** Rat with all positive needs and good job assignment. After one full shift, owner_relationship should be slightly higher than at start.
-
-### 10.2 Relationship decreases from unmet needs / overwork
-- [ ] Chronically unmet needs and burnout state degrade owner_relationship each tick
-
-**Test:** Rat with nutrition=-60 for a full shift. owner_relationship should be lower at end of shift. Rat in BURNOUT assigned to a job — owner_relationship should drop faster.
-
-### 10.3 Colony relationship
-- [ ] `colony_relationship` is the simple average of all individual `owner_relationship` scores
-
-**Test:** Set three rats' owner_relationship to 60, -20, 40. `colony_relationship` should read 26.67 (or ≈27 if integer). Changing one rat's relationship should update the colony figure.
-
----
-
-## 11. Owner Pressure Spike
-
-### 11.1 Spike raises employment_pressure temporarily
-- [ ] Owner triggers a pressure event; all job location scores are boosted for a short window; decays back to base
-
-**Test:** Trigger a spike. Measure job location score before, during, and 30 seconds after. During: measurably higher. After: back to approximately baseline.
-
-### 11.2 Relationship cost scales with current relationship
-- [ ] Spike costs owner_relationship per rat; rats at lower relationship take a larger hit
-
-**Test:** Two rats: owner_relationship=+60 and owner_relationship=-40. Trigger a spike. Measure owner_relationship change for each. The -40 rat should lose more points than the +60 rat from the same spike.
-
-### 11.3 Overuse stacks damage
-- [ ] Consecutive spikes in quick succession apply escalating relationship damage
-
-**Test:** Trigger 5 pressure spikes in rapid succession on the same rats. Relationship damage per spike should increase across the series. Stress on rats should also be escalating.
-
----
-
-## 12. Colony Observability
-
-### 12.1 Rat mood signal
-- [ ] Each rat exposes a `mood` signal derived from stress and need levels
-- [ ] Rats in REBELLION suppress this signal (appear fine)
-
-**Test:** Rat with stress=80 and nutrition=-60: mood signal should read negative/distressed. Same rat in REBELLION: mood signal reads neutral or positive despite identical internal stats.
-
-### 12.2 Pod indicators
-- [ ] Each pod generates 1–2 descriptive indicator strings based on group dynamics, inebriation, camaraderie, and presence of vices
-
-**Test:** Pod with one heavy drinker (inebriation=80): indicator should mention drinking or erratic behavior. Pod with high camaraderie rats: indicator should describe smooth function or good energy.
-
-### 12.3 Colony appetite
-- [ ] `appetite` = total consumption rate of food and vices across all rats in the current tick window
-
-**Test:** Add a rat with high addiction (addiction=80). Colony `appetite` for that vice should be measurably higher than a colony with no addicted rats. Print appetite values before and after adding the addicted rat.
-
----
-
-## Deferred / Out of Scope for Now
-
-- **Per-field debug breakdowns — next sprint candidate:** offer an optional foldout beside each input. Move stress details to the stress row; add each need's decay, location/job effects, and net change per game-hour. Rows offer details only when available. Settle layout/data contracts before writing sprint tasks; the separate need-rate-label proposal is superseded.
-- **Reusable Movement component:** consider a child Node for speed, destination tracking, frame movement, and arrival signaling; Rat retains state ownership and request acceptance. NeedSystem/StressSystem remain static utilities.
-- **Main-mediated clock routing:** review the game-loop/update-time contract before replacing the existing GameClock-to-RatManager connection.
-- **Shared bounds/clamping:** revisit ownership and API for repeated ranges; current setters remain authoritative.
-- **Snapshot allocation:** profile representative colony sizes before introducing buffer reuse.
-- **Existing shutdown leaks:** investigate the ObjectDB/two-resource exit messages separately when prioritized.
-
-- **Signal bus / event bus** — needed eventually for push events (fight challenges, organizer broadcasts, owner pressure spikes). Core action selection uses smart-object polling instead; signal bus is for interrupts and rare event-driven behaviors only.
-
-- Pathfinding (current travel uses straight-line frame movement)
-- Rat economy / currency system (design TBD)
-- Full UI for owner-facing stats
-- Art/animations for crisises and environmental tells
-- Health inspector and reviews
-- Rat Man ending trigger conditions
+# Rat Simulation Backlog
+
+Unfinished work and ideas for future sprints. No sprint is active; order here
+is not priority. Choose scope and settle design before turning an item into
+sprint tasks with observable tests.
+
+## Current baseline
+
+Implemented: five needs and urgency curves, location appeal and physical effects,
+job assignment and active work, staggered decisions, need decay, tiered stress,
+owned rat state, and debug inspection/editing with pause and speed controls.
+Latest completed sprint: [Rat Ownership and Debug Reliability](sprints/06-rat-ownership-and-debug-reliability.md)
+(`f376ce5`, 2026-10-12). Tests and retrospective stay in the sprint records.
+
+## Debug tooling
+
+- [ ] Per-field breakdowns: stress details beside stress; decay, location, job,
+  and net hourly rates beside each need. Settle layout and data contracts first.
+- [ ] Inspect dynamic relationships and job skills when their gameplay needs it.
+
+## Behavior and tuning
+
+- [ ] Tune urgency curves, appeal, decay, modifiers, stress tiers, and work pressure
+  through play. Track behavioral goals in [Rat-Turing Complete](RAT_TURING_COMPLETE.md).
+- [ ] Personality and owner relationship influence location scoring.
+- [ ] Stress influences choices: more vice appeal, less work appeal.
+- [ ] Nearby rats influence location appeal through camaraderie and socialness.
+- [ ] Define fulfillment events and stopping conditions before adding source
+  history and repetition penalties; friends should soften social repetition.
+- [ ] Observe switching before choosing inertia, primary-need locks, or variance.
+- [ ] Revisit weak-axis dilution in scoring if tuning is insufficient; see
+  [Algorithm Research](ALGORITHM_RESEARCH.md).
+- [ ] Decide whether health, inebriation, and skill progression need scoring inputs.
+
+## Jobs
+
+- [ ] Job-skill storage, personality-weighted generation, and permanent progression.
+- [ ] Assignment slot limits and pods.
+- [ ] Individual performance from skill, personality fit, needs, stress, health,
+  inebriation, and crisis; pod performance adds group dynamics.
+- [ ] Job variety: prolonged assignment carries a stress cost.
+
+## Relationships and social behavior
+
+- [ ] Seed camaraderie on first meeting; good/bad interactions change it and
+  separation slowly weakens it. Storage already exists.
+- [ ] Social and group-activity broadcasts; personality-dependent fulfillment.
+- [ ] Conflict, fight challenges, fleeing/chasing, health costs, and relationship
+  consequences. Revisit the old dependence on per-vice identity.
+- [ ] Owner relationship responds to met needs, job fit, deprivation, and overwork;
+  expose the colony average as appropriate.
+- [ ] Temporary owner-pressure spikes, with relationship/stress costs and
+  escalating damage from overuse.
+
+## Stress, vice, and crisis
+
+- [ ] Temper and owner relationship influence stress accumulation.
+- [ ] Direct vice stress relief, provision/withholding consequences, and inebriation
+  effects; smoking near food affects quality. Vice currently has one need.
+- [ ] Breaking-point roll: burnout or rebellion, weighted by personality,
+  owner relationship, and overwork.
+- [ ] Burnout: visible tells, locked stress, faster energy/vice depletion, reduced
+  performance, rest/recovery, and fatal extra stress if forced to keep working.
+- [ ] Death: remove rat references and apply the colony relationship consequence.
+- [ ] Rebellion: conceal distress, organize while working, spread radicalization,
+  escalate environmental tells, and resolve isolation/removal consequences.
+
+## Player-facing systems
+
+- [ ] Mood/health tells, pod indicators, colony relationship, and food/vice appetite.
+- [ ] Crisis art/animations and environmental tells.
+- [ ] Rat economy/currency, owner UI, health inspection/reviews, and Rat Man ending.
+
+## Deferred technical work
+
+- Movement composition; Rat keeps state ownership and arrival acceptance.
+- Pathfinding; travel currently follows a straight line.
+- Main-mediated clock routing, after agreeing the update/time contract.
+- Shared bounds/clamping, after agreeing ownership and API.
+- Snapshot allocation profiling at representative colony sizes.
+- Investigate existing ObjectDB/two-resource shutdown leaks.
+- Event bus for interrupts/broadcasts if a concrete feature needs it.
+- Live tuning controls or modifier isolation when playtesting calls for them.
+
+## Shelved
+
+Per-vice identity, addiction/resistance, abstinence decay, and personality-weighted
+vice generation. Reopen their design before adding tasks; no RatVice API exists.
+
+See [Rat Simulation](RAT_SIMULATION.md) for feature detail,
+[Pitch](PITCH.md) for direction, and [sprint records](sprints/) for history.

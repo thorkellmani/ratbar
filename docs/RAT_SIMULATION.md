@@ -1,5 +1,22 @@
 # Rat Simulation
 
+This document describes the intended simulation, including future mechanics.
+The [backlog](RAT_SIMULATION_BACKLOG.md) records implementation status. The latest
+completed sprint is [Rat Ownership and Debug Reliability](sprints/06-rat-ownership-and-debug-reliability.md),
+included in commit `f376ce5` (2026-10-12), following the stress implementation in
+`4ac4c5f`. No sprint is currently active.
+
+Current behavior: rats own RatState Resources, consumers inspect detached copies,
+and RatManager coordinates need/stress update drafts for Rat acceptance. All five
+needs start at `80` and decay by `-5/h`, including during travel. Stationary
+location effects and active assigned work offset decay. Decisions use a power
+mean (`p = 3`) of urgency × normalized pull, plus assigned-station employment
+pressure. Stress uses effective average urgency tiers and active work adds `+3/h`.
+Personality scoring, random score variance, switching inertia, job skills,
+per-vice tracking, social interactions, and gameplay crisis behavior remain future
+work. See the [Rat runtime documentation](../entities/rat/README.md) for ownership
+and request contracts.
+
 ## Overview
 
 Rats operate autonomously. They have needs that decay over time, a personality that shapes how they respond, and a job they are nominally assigned to. The owner manages conditions — he does not control rats directly. Behavior emerges from the simulation.
@@ -12,14 +29,17 @@ The model is inspired by The Sims: locations and actions advertise their potenti
 
 The simulation runs on its own clock, not on Godot's per-frame `_process()` and not on any individual rat's own timer.
 
-**Convention:** 1 game-hour = 60 real seconds at 1x `Engine.time_scale`. A 16-hour shift plays out in 16 real minutes. Debug time-scale controls (0.5x/1x/2x/5x/10x) scale this uniformly — a shift always takes the same number of *game*-hours, just compressed or stretched in real time.
+**Convention:** 1 game-hour = 60 real seconds at 1x `Engine.time_scale`. A 16-hour shift plays out in 16 real minutes. Debug time-scale controls (0.5x/1x/5x/10x) scale this uniformly — a shift always takes the same number of *game*-hours, just compressed or stretched in real time.
 
-A single `GameClock` emits a tick at a fixed real-time interval; `ticks_per_hour` is derived from that interval and the convention above. Two independent systems consume this clock, and they are deliberately not the same cadence:
+A single `GameClock` emits a tick every simulation second; `GAME_TICKS_PER_IN_GAME_HOUR = 60`. Two kinds of updates run at different cadences:
 
 - **Decision-making** — a rat deciding where to go next. This doesn't need to happen every tick for every rat; each rat is assigned a fixed slot at generation and only re-evaluates on ticks matching its slot, so a colony's decisions are spread out rather than all recomputed on the same tick.
-- **Need application** — a location's effect actually being applied to a rat's needs (e.g. nutrition rising while stood at the Pantry). This runs every tick, for every rat that's currently stationary at a location, regardless of that rat's decision slot. A rat mid-travel between locations gets no need application at all until it arrives.
+- **Need and stress application** — runs every tick for every rat, regardless of its decision slot. Baseline need decay continues during travel. Location effects apply while stationary; job effects and work stress apply only while actively working an assigned job at one of its stations.
 
-Only one thing listens to `GameClock` directly — `RatManager` — which then calls into individual rats itself, rather than every rat subscribing to the clock independently. This keeps the "who runs when" scheduling logic in one place instead of duplicated across the whole colony.
+Only RatManager listens to `GameClock.tick`. It runs NeedSystem then StressSystem
+on each rat's detached update draft and requests acceptance before scheduled
+destination choice. Rats occupy one of 15 weighted-random decision slots, giving
+four decisions per game-hour. Movement runs separately in Rat's `_process()`.
 
 ---
 
@@ -90,7 +110,7 @@ Continuous stats, -100 to 100. 0 = neutral. Negative = deprived. Positive = sati
 | `extra_stress` | 0 to 100 | Hidden. Accumulates in burnout when forced to work. Maxing out kills the rat. |
 | `currency` | 0 to inf | Gains and losses through gambling. Economy TBD. |
 | `crisis` | UNAFFECTED / BURNOUT / REBELLION | Set by breaking point roll. |
-| `state` | IDLE / PROCEEDING_TO_WORK / WORKING / PROCEEDING_TO_VICE / VICING | Current activity state. |
+| `activity_state` | IDLE / TRAVELLING / WORKING | Current implemented activity state. Arrival settles idle; RatManager requests work if the current assignment includes the reached location. |
 
 ### Per-Rat Collections
 
@@ -262,7 +282,11 @@ Global skew proportional to stress level:
 - Location-level: same job assigned too long, apply cumulative penalty to that job location
 
 **8. Score calculation**
-`sum(need_urgency[n] x modified_tag_value[n])` across all needs. Health and inebriation included as need-like inputs.
+The implemented score is a power mean (`p = 3`) of urgency × normalized pull
+over positive-pull need axes, plus applicable employment pressure. The original
+sum proposal was replaced; see [Algorithm Research](ALGORITHM_RESEARCH.md).
+Additional personality, health, inebriation, and other modifiers in this flow
+need design and verification before extending the current score.
 
 **9. Variance**
 Small random factor added to final score.

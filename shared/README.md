@@ -5,6 +5,6 @@
 
 Concrete need types own their bounds and notifications: `Needs` belongs to rat attributes, `NeedDecayRate` to rat configuration, and location/job modifiers to their respective entity folders. `LocationPull` also owns normalization for appeal scoring.
 
-Rat-specific `Personality`, `Status`, and `Camaraderie` are standalone Resources under `entities/rat/data/attributes/`. The detached `RatSimulationState` lives separately under `entities/rat/data/simulation/`. Scalar activity, crisis, currency, and owner relationship values belong directly to Rat; JobManager owns assignment.
+Rat-specific `Personality`, `Status`, and `Camaraderie` are standalone Resources under `entities/rat/data/attributes/`. Rat owns a `RatState` Resource under `entities/rat/data/state/`; inspection uses native deep copies. The narrow `RatStateUpdateDraft` under `entities/rat/data/simulation/` is a detached RefCounted object for need/stress calculations. Scalar activity, crisis, currency, and owner relationship values belong to RatState; JobManager owns assignment.
 
 The former `BaseStatGroup` and `field_groups` hierarchy has been removed. Share field declarations where multiple types use them; keep constraints and notifications with the concrete owner.
